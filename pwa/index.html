@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; worker-src 'self'; manifest-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#3d7a1f">
+<meta name="description" content="抜け毛を写真で数えて記録するアプリ。写真も解析も記録も、あなたの端末の中だけ。インストール不要・通信なし。">
+<title>Hair Loss Counter</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>Hair Loss Counter<small>抜け毛を写真で数える</small></h1>
+    <button type="button" class="chip" id="netChip" aria-controls="proofBox"><span class="dot"></span><span id="netText">通信なし</span></button>
+  </header>
+  <p class="note strong" id="lead">写真も解析も記録も、このスマホの中だけで完結します。機内モードでも使えます。</p>
+  <p class="note" id="iosHint" hidden>iPhoneでは、共有ボタンから「ホーム画面に追加」をして使ってください。追加しないと、7日間使わなかったときに記録が消えることがあります。</p>
+
+  <section class="card" aria-labelledby="h-capture">
+    <h2 id="h-capture"><span class="step">01</span>3枚撮る</h2>
+    <p class="hint">洗面台などに毛を置き、横に硬貨かカードを1つ置きます。同じ場所を角度を変えて3枚撮ると、反射で見えない所を補えます。</p>
+    <div class="slots" id="slots">
+      <div class="slot"><b>1枚目</b>真上から<br>（長さの基準）</div>
+      <div class="slot"><b>2枚目</b>少し左に傾けて</div>
+      <div class="slot"><b>3枚目</b>少し右に傾けて</div>
+    </div>
+    <div class="btn-row">
+      <label class="btn primary">カメラで撮る<input id="inCamera" type="file" accept="image/*" capture="environment"></label>
+      <label class="btn">写真を選ぶ<input id="inPick" type="file" accept="image/*"></label>
+    </div>
+    <div id="thumbs" class="thumbs" aria-live="polite"></div>
+    <details class="fallback">
+      <summary>写真が選べないとき</summary>
+      <div class="fb-body">
+        <label for="inPick2" class="hint">標準のボタンからも選べます（まとめて選ぶ場合は写真を長押し）</label>
+        <input id="inPick2" type="file" accept="image/*" multiple>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" aria-labelledby="h-ref">
+    <h2 id="h-ref"><span class="step">02</span>比較物を指定する</h2>
+    <div class="refrow">
+      <div class="field"><label for="selKind">種類</label>
+        <select id="selKind"><option value="coin">硬貨</option><option value="card">カード（クレジットカード大）</option><option value="none">なし（長さは測らない）</option></select></div>
+      <div class="field" id="fCountry"><label for="selCountry">通貨</label><select id="selCountry"></select></div>
+    </div>
+    <div class="coins" id="coins" role="group" aria-label="硬貨を選ぶ"></div>
+    <p class="hint" id="refHint">1枚目の写真を入れると、ここに表示されます。</p>
+    <div class="pickwrap" id="pickWrap" hidden><canvas id="pick"></canvas></div>
+    <div class="btn-row" id="refTools" hidden>
+      <button class="btn small" type="button" id="btnRefMode">うまく合わない：両端を2回タップで指定</button>
+      <button class="btn small" type="button" id="btnRefClear">やり直す</button>
+    </div>
+    <p class="status" id="refStatus" role="status"></p>
+    <button id="btnAnalyze" class="btn primary" disabled>解析する</button>
+    <div id="progress" class="progress" hidden>
+      <div class="bar"><i id="barFill"></i></div>
+      <div class="ptext" id="pText">準備中</div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-result" id="resultCard" hidden>
+    <h2 id="h-result"><span class="step">03</span>結果</h2>
+    <div class="readout">
+      <div class="num" id="rNum">—<small>本</small></div>
+      <div class="meta"><div id="rPer"></div><div id="rSpread"></div></div>
+    </div>
+    <div class="alerts" id="rAlerts"></div>
+    <div class="chips" id="rChips"></div>
+    <div class="viewer">
+      <div class="tabs" id="tabs"></div>
+      <div class="canvas-wrap" id="cwrap"><canvas id="ov"></canvas></div>
+      <p class="legend">線の色は、ひと続きにたどれた毛です。絡まった所では1本の毛が何本かに分かれます。</p>
+    </div>
+    <h3 class="sub">長さの分布（最長→最短を20区間）</h3>
+    <svg class="histo" id="histo" viewBox="0 0 560 170" role="img" aria-label="たどれた毛の長さの分布"></svg>
+    <p class="legend">たどれた線の長さです。絡まって途中で切れた毛は、実際より短く出ます。</p>
+    <div class="confirm" id="confirmBox">
+      <div class="stepper">
+        <label for="inConfirm">確定する本数</label>
+        <button type="button" id="btnMinus" aria-label="1本減らす">−</button>
+        <input id="inConfirm" type="number" inputmode="numeric" min="0" step="1" value="0">
+        <button type="button" id="btnPlus" aria-label="1本増やす">＋</button>
+      </div>
+      <label class="check"><input type="checkbox" id="inVerified"><span>この本数は実際に数えて確かめた（あなたの髪に合わせた補正に使います）</span></label>
+      <div class="field"><label for="inMemo">メモ（任意）</label><input id="inMemo" type="text" maxlength="200" placeholder="例：朝のブラッシング"></div>
+      <div class="btn-row">
+        <button class="btn primary" id="btnSave">記録する</button>
+        <button class="btn" id="btnImg">色分け画像を保存</button>
+        <button class="btn" id="btnZip">結果一式を保存（ZIP）</button>
+      </div>
+      <p class="status" id="saveStatus" role="status"></p>
+      <p class="hint">記録するのは数値とファイル名だけです。画像はアプリの中に残りません。残したい画像は、上のボタンで端末に保存してください。</p>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-hist">
+    <h2 id="h-hist"><span class="step">04</span>記録</h2>
+    <svg class="trend" id="trend" viewBox="0 0 560 150" role="img" aria-label="確定本数の推移" hidden></svg>
+    <ul class="hist" id="hist"></ul>
+    <p class="hint" id="histEmpty">記録するとここに並び、本数の推移がグラフになります。</p>
+    <p class="note">記録はこのブラウザの中だけにあります。ブラウザの「サイトのデータ」を消すと、記録も消えます。控えは下のボタンで書き出せます。</p>
+    <div class="btn-row">
+      <button class="btn small" id="btnExport" type="button">記録を書き出す</button>
+      <label class="btn small fileimport">記録を読み込む<input id="inImport" type="file" accept="application/json,.json"></label>
+      <button class="btn small" id="btnShare" type="button">シェア用の画像を作る</button>
+    </div>
+    <p class="status" id="histStatus" role="status"></p>
+    <div id="shareBox" hidden>
+      <div class="sharewrap"><canvas id="shareCv" width="1080" height="1080"></canvas></div>
+      <p class="hint">写真は入りません。本数と推移のグラフだけの画像です。</p>
+      <div class="btn-row">
+        <button class="btn small" id="btnShareSave" type="button">画像を保存</button>
+        <button class="btn small" id="btnShareSend" type="button" hidden>共有する</button>
+      </div>
+    </div>
+  </section>
+
+  <details class="card" id="proofBox">
+    <summary>外に出ていないことを確かめる</summary>
+    <div class="proof">
+      <div class="row"><span>外部への通信</span><b id="pExt" class="zero">0 件</b></div>
+      <div class="row"><span>ブロックした通信の試み</span><b id="pBlocked" class="zero">0 件</b></div>
+      <div class="row"><span>アプリ本体のファイル読み込み</span><b id="pOwn">0 件</b></div>
+      <div class="row"><span>オフラインでの利用</span><b id="pOffline">確認中</b></div>
+      <div class="row"><span>記録の保護</span><b id="pPersist">確認中</b></div>
+    </div>
+    <ul class="tips">
+      <li>このページには「外部へ一切通信しない」という設定（CSP）が入っています。コードが通信しようとしても、ブラウザが止めます。</li>
+      <li>確かめ方：スマホを機内モードにして、撮影から記録まで使ってみてください。全部そのまま動きます。</li>
+      <li>通信が起きるのは、このアプリ本体のファイルを取りに行くとき（最初に開いたときと、更新があるとき）だけです。写真・解析結果・記録は送りません。</li>
+      <li>サーバーにはアカウントもデータベースもありません。アクセス解析や広告のコードも入れていません。</li>
+      <li>「記録の保護」が「通常」のときは、スマホの空き容量が少ないと、ブラウザが記録を消すことがあります。ホーム画面に追加すると消されにくくなります。</li>
+      <li id="srcRow" hidden>ソースコードは公開しています。<span id="srcLink"></span></li>
+    </ul>
+  </details>
+
+  <details class="card">
+    <summary>上手に撮るコツ</summary>
+    <ul class="tips">
+      <li>1枚目は真上から。斜めの写真は長さの基準にできません。</li>
+      <li>3枚とも、毛と比較物の全体が入るように、ほぼ同じ距離で撮ります。</li>
+      <li>無地の台が向いています。大理石模様・木目・傷の多い台は、模様を毛と間違えます。</li>
+      <li>白い台では白髪、黒い台では黒い毛、茶色い台では茶色い毛が数えられません。</li>
+      <li>硬貨やカードは毛に重ねず、少し離して置きます。</li>
+      <li>塊は軽くほぐすと精度が上がります。</li>
+      <li>最初の1〜3回は、手で数えた本数を「確かめた」で記録してください。あなたの髪の長さに合わせて補正されます。髪を切ったら、もう一度お願いします。</li>
+    </ul>
+  </details>
+
+  <details class="card" id="settingsBox">
+    <summary>設定</summary>
+    <div class="set">
+      <div class="row"><label for="inSens">検出の感度</label><span class="val" id="vSens">1.0</span></div>
+      <input id="inSens" type="range" min="0.6" max="1.6" step="0.1" value="1.0">
+      <span class="hint">上げると薄い毛も拾いますが、傷やゴミも拾いやすくなります。</span>
+    </div>
+    <div class="set">
+      <div class="row"><label for="inMinLen">数える最短の長さ</label><span class="val" id="vMinLen">10 mm</span></div>
+      <input id="inMinLen" type="range" min="4" max="30" step="1" value="10">
+    </div>
+    <div class="set">
+      <div class="row"><span>本数の補正</span><span class="val" id="vCalib">未設定</span></div>
+      <span class="hint">比較物つきで撮り、「実際に数えて確かめた」で記録するたびに更新されます。</span>
+      <button class="btn small" id="btnCalibReset" type="button">補正を消す</button>
+    </div>
+    <div class="set">
+      <div class="row"><span>すべての記録</span><span class="val" id="vCount">0 件</span></div>
+      <button class="btn small danger" id="btnWipe" type="button">記録と設定をすべて消す</button>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary>このアプリについて</summary>
+    <ul class="tips">
+      <li>今ある機能は、ずっと無料です。将来、便利な機能を有料で追加することがあっても、今の機能を有料にはしません。</li>
+      <li>有料版（Pro）のライセンスキーは、まだ提供していません。</li>
+      <li>表示される本数は目安です。医療機器ではなく、診断や治療の判断はしません。気になる変化があるときは、医師に相談してください。</li>
+    </ul>
+  </details>
+
+  <footer>Hair Loss Counter <span id="ver"></span> · 写真は端末の外に出ません</footer>
+</main>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

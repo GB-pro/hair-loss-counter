@@ -1,0 +1,13 @@
+{
+  "name": "hair-loss-counter",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Count shed hairs from photos, entirely on the device. No network, no install.",
+  "scripts": {
+    "build": "python build_pwa.py",
+    "synth": "python tools/gen_free.py",
+    "test:engine": "node test/free.js 3",
+    "test:pwa": "node test/pwa.js"
+  },
+  "devDependencies": { "jpeg-js": "0.4.4", "puppeteer-core": "23.11.1" }
+}
