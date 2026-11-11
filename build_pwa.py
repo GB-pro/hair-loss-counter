@@ -18,10 +18,13 @@ self.addEventListener('activate', function (e) {
 self.addEventListener('fetch', function (e) {
   var u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== self.location.origin) { e.respondWith(Response.error()); return; }   // nothing leaves this site
-  e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
-    if (hit) return hit;
-    if (e.request.mode === 'navigate') return caches.match('./');
-    return fetch(e.request);
+  // look only in this version's cache, so an older cache left behind can never serve stale files
+  e.respondWith(caches.open(CACHE).then(function (c) {
+    return c.match(e.request, { ignoreSearch: true }).then(function (hit) {
+      if (hit) return hit;
+      if (e.request.mode === 'navigate') return c.match('./').then(function (h) { return h || fetch(e.request); });
+      return fetch(e.request);
+    });
   }));
 });
 """ % (ver, repr(['./'] + files).replace("'", '"'))
