@@ -1,6 +1,6 @@
 /* Hair Loss Counter — service worker. Serves the app's own files from the device so it works offline.
    It only ever requests this app's own files from this site; it never sends anything. */
-var CACHE = 'hlc-fe3c794b8f8a';
+var CACHE = 'hlc-3ec5d710818e';
 var FILES = ["./", "index.html", "styles.css", "app.js", "engine.js", "worker.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
 self.addEventListener('install', function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); })); });
 self.addEventListener('activate', function (e) {
