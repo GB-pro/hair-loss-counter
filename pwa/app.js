@@ -74,6 +74,13 @@
     };
     worker.onerror = function () { worker = null; Object.keys(jobs).forEach(function (id) { jobs[id].reject(new Error('worker')); delete jobs[id]; }); };
   } catch (e) { worker = null; }
+  function findCoin(work) {   // automatic coin search, off the main thread when possible
+    if (worker) return new Promise(function (resolve, reject) {
+      var id = ++jobSeq, copy = new Uint8ClampedArray(work.data); jobs[id] = { resolve: resolve, reject: reject, progress: function () {} };
+      try { worker.postMessage({ id: id, op: 'coin', work: { width: work.width, height: work.height, data: copy } }, [copy.buffer]); } catch (err) { delete jobs[id]; reject(err); }
+    });
+    return Promise.resolve(window.HLC.findCoin(work));
+  }
   function analyze(imgs, opt, progress) {
     if (worker) return new Promise(function (resolve, reject) {
       var id = ++jobSeq; jobs[id] = { resolve: resolve, reject: reject, progress: progress };
@@ -105,22 +112,86 @@
     Array.prototype.slice.call(list || []).forEach(function (f) {
       if (f.type && f.type.indexOf('image/') !== 0) return;
       if (state.photos.length >= MAX_PHOTOS) return;
-      state.photos.push({ id: ++seq, file: f, url: URL.createObjectURL(f) });
+      state.photos.push({ id: ++seq, file: f, url: URL.createObjectURL(f), coin: null });
     });
     state.analyzed = false; renderThumbs(); ensureWork1();
   }
-  ['inCamera', 'inPick', 'inPick2'].forEach(function (id) { $(id).addEventListener('change', function (e) { addFiles(e.target.files); e.target.value = ''; }); });
+  ['inCamera', 'inPick'].forEach(function (id) { $(id).addEventListener('change', function (e) { addFiles(e.target.files); e.target.value = ''; }); });
+
+  // ---------------------------------------------------------------- in-app camera
+  // Uses the highest resolution and the flash for each shot, only while this screen is open. Closing it stops the
+  // camera, so nothing stays changed on the phone. If the browser has no camera access, the system camera opens instead.
+  var cam = { stream: null, track: null, ic: null, pcaps: null, caps: {}, torch: false, shots: 0 };
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  async function openCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $('inCamera').click(); return; }
+    try {
+      cam.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 4096 }, height: { ideal: 4096 } } });
+    } catch (e) { cam.stream = null; $('camNote').textContent = 'カメラを使えませんでした（許可されていないか、ほかのアプリが使用中）。標準のカメラで撮ってください。'; $('inCamera').click(); return; }
+    cam.track = cam.stream.getVideoTracks()[0]; cam.caps = cam.track.getCapabilities ? cam.track.getCapabilities() : {};
+    if (cam.caps.width && cam.caps.height) { try { await cam.track.applyConstraints({ width: { ideal: cam.caps.width.max }, height: { ideal: cam.caps.height.max } }); } catch (e) { /* keep what we got */ } }
+    cam.ic = null; cam.pcaps = null;
+    if (window.ImageCapture) { try { cam.ic = new ImageCapture(cam.track); cam.pcaps = await cam.ic.getPhotoCapabilities(); } catch (e) { cam.pcaps = null; } }
+    cam.shots = 0; $('camVideo').srcObject = cam.stream; $('cam').hidden = false; document.body.classList.add('noscroll');
+    try { await $('camVideo').play(); } catch (e) { /* autoplay attribute covers it */ }
+    camInfo();
+  }
+  function camFlashMode() {
+    if (cam.pcaps && cam.pcaps.fillLightMode && cam.pcaps.fillLightMode.indexOf('flash') >= 0) return 'flash';
+    if (cam.caps && cam.caps.torch) return 'torch';
+    return '';
+  }
+  function camInfo() {
+    var w = 0, h = 0;
+    if (cam.pcaps && cam.pcaps.imageWidth && cam.pcaps.imageHeight) { w = cam.pcaps.imageWidth.max; h = cam.pcaps.imageHeight.max; }
+    else { var st = cam.track && cam.track.getSettings ? cam.track.getSettings() : {}; w = st.width || 0; h = st.height || 0; }
+    var fm = camFlashMode();
+    $('camInfo').textContent = (w ? Math.round(w * h / 1e5) / 10 + 'M画素（' + w + '×' + h + '）' : '') + ' ・ ' + (fm ? 'フラッシュあり' : 'この端末のブラウザではフラッシュを使えません') + ' ・ 硬貨と毛が全部入るように';
+    $('camCount').textContent = state.photos.length + ' / 3';
+  }
+  async function camShoot() {
+    if (!cam.track) return;
+    $('camShot').disabled = true; var blob = null, fm = camFlashMode();
+    try {
+      if (cam.ic && cam.pcaps) {
+        var ps = {};
+        if (cam.pcaps.imageWidth) ps.imageWidth = cam.pcaps.imageWidth.max;
+        if (cam.pcaps.imageHeight) ps.imageHeight = cam.pcaps.imageHeight.max;
+        if (fm === 'flash') ps.fillLightMode = 'flash';
+        try { blob = await cam.ic.takePhoto(ps); } catch (e) { try { blob = await cam.ic.takePhoto(); } catch (e2) { blob = null; } }
+      }
+      if (!blob) {   // grab a frame from the preview, with the torch on if the camera has one
+        if (fm === 'torch') { try { await cam.track.applyConstraints({ advanced: [{ torch: true }] }); cam.torch = true; await sleep(450); } catch (e) { /* no torch after all */ } }
+        var v = $('camVideo'), c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0);
+        blob = await new Promise(function (r) { c.toBlob(r, 'image/jpeg', 0.95); });
+        await torchOff();
+      }
+    } catch (e) { blob = null; }
+    $('cam').classList.add('flash'); setTimeout(function () { $('cam').classList.remove('flash'); }, 120);
+    if (blob) { cam.shots++; addFiles([new File([blob], 'camera_' + stamp(new Date()) + '_' + cam.shots + '.jpg', { type: 'image/jpeg', lastModified: Date.now() })]); }
+    $('camShot').disabled = false; camInfo();
+    if (state.photos.length >= 3 || state.photos.length >= MAX_PHOTOS) closeCamera();
+  }
+  async function torchOff() { if (cam.torch && cam.track) { try { await cam.track.applyConstraints({ advanced: [{ torch: false }] }); } catch (e) { /* ignore */ } } cam.torch = false; }
+  function closeCamera() {
+    torchOff();
+    if (cam.stream) cam.stream.getTracks().forEach(function (t) { t.stop(); });   // releases the camera: its settings go back to normal
+    cam.stream = null; cam.track = null; cam.ic = null; cam.pcaps = null; $('camVideo').srcObject = null;
+    $('cam').hidden = true; document.body.classList.remove('noscroll');
+  }
+  $('btnCamera').addEventListener('click', openCamera);
+  $('camShot').addEventListener('click', camShoot);
+  $('camClose').addEventListener('click', closeCamera);
+  document.addEventListener('visibilitychange', function () { if (document.hidden && cam.stream) closeCamera(); });
   function removePhoto(id) {
-    var first = state.photos[0] && state.photos[0].id === id;
     state.photos = state.photos.filter(function (p) { if (p.id === id) { URL.revokeObjectURL(p.url); return false; } return true; });
-    if (first) { state.work1 = null; resetRef(); }
     renderThumbs(); ensureWork1();
   }
   function renderThumbs() {
     var box = $('thumbs'); box.textContent = '';
     state.photos.forEach(function (p, i) {
       var d = document.createElement('div'); d.className = 'thumb';
-      var im = document.createElement('img'); im.src = p.url; im.alt = (i + 1) + '枚目'; d.appendChild(im);
+      var im = document.createElement('img'); im.src = p.url; im.alt = (i + 1) + '枚目'; im.dataset.name = p.file.name || ''; d.appendChild(im);
       var b = document.createElement('span'); b.className = 'badge'; b.textContent = i === 0 ? '1 基準' : String(i + 1); d.appendChild(b);
       var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', (i + 1) + '枚目を外す');
       x.addEventListener('click', function () { removePhoto(p.id); }); d.appendChild(x);
@@ -157,9 +228,12 @@
     $('btnRefMode').textContent = state.ref.manual ? '1回タップで自動検出に戻す' : 'うまく合わない：両端を2回タップで指定';
     var h = $('refHint');
     if (state.ref.kind === 'none') h.textContent = '比較物なしでは、本数は数えますが、長さはおおよその値になります。';
-    else if (!state.work1) h.textContent = '1枚目の写真を入れると、ここに表示されます。';
+    else if (state.ref.scanning) h.textContent = '写真の中の硬貨を探しています…';
+    else if (!state.work1) h.textContent = '写真を入れると、ここに表示されます。';
     else if (state.ref.manual) h.textContent = state.ref.kind === 'card' ? 'カードの長い辺の両端を、順に2回タップしてください。' : '硬貨の端と、その反対側の端を、順に2回タップしてください。';
-    else h.textContent = state.ref.kind === 'card' ? '写真の中のカードの真ん中をタップしてください。' : '写真の中の硬貨の真ん中をタップしてください。';
+    else if (state.ref.kind === 'card') h.textContent = '写真の中のカードの真ん中をタップしてください。';
+    else if (state.ref.autoFound) h.textContent = '硬貨を自動で見つけました' + (state.ref.reordered ? '（硬貨がいちばん丸く写った写真を基準にしました）' : '') + '。違う物を囲んでいたら、正しい硬貨をタップしてください。';
+    else h.textContent = '硬貨を自動で見つけられませんでした。写真の中の硬貨の真ん中をタップしてください。';
     drawPick(); refStatus(); updateAnalyzeBtn();
   }
   function refStatus() {
@@ -198,18 +272,44 @@
     else { r.tap = [nx, ny]; r.points = []; refit(); }
     state.analyzed = false; renderRefControls();
   });
-  $('btnRefMode').addEventListener('click', function () { state.ref.manual = !state.ref.manual; resetRef(); renderRefControls(); });
+  $('btnRefMode').addEventListener('click', function () { state.ref.manual = !state.ref.manual; resetRef(); autoTapCoin(); renderRefControls(); });
   $('btnRefClear').addEventListener('click', function () { resetRef(); renderRefControls(); });
-  $('selKind').addEventListener('change', function (e) { state.ref.kind = e.target.value; resetRef(); saveSettings(); renderRefControls(); });
+  $('selKind').addEventListener('change', function (e) { state.ref.kind = e.target.value; resetRef(); autoTapCoin(); saveSettings(); renderRefControls(); });
   $('selCountry').addEventListener('change', function (e) { state.ref.country = e.target.value; state.ref.coin = Math.min(state.ref.coin, COINS[e.target.value].coins.length - 1); saveSettings(); refit(); renderRefControls(); });
-  var work1For = 0;
+  // The coin is found automatically in every photo. The photo where it looks roundest was taken most nearly straight
+  // down, so it becomes the reference (photo 1) whatever order the photos were taken or picked in.
+  var refRun = 0;
   async function ensureWork1() {
-    var p = state.photos[0];
-    if (!p) { state.work1 = null; work1For = 0; renderRefControls(); return; }
-    if (work1For === p.id) { renderRefControls(); return; }
-    work1For = p.id; state.work1 = null; resetRef(); renderRefControls();
-    try { var img = await loadImageData(p.file); if (work1For !== p.id) return; state.work1 = HLC.toWork(img, {}); } catch (e) { state.work1 = null; }
+    var run = ++refRun;
+    if (!state.photos.length) { state.work1 = null; resetRef(); renderRefControls(); return; }
+    state.ref.scanning = true; renderRefControls();
+    var works = {};
+    for (var i = 0; i < state.photos.length; i++) {
+      var p = state.photos[i];
+      if (p.coin && i > 0) continue;
+      try {
+        var img = await loadImageData(p.file); if (run !== refRun) return;
+        var wk = HLC.toWork(img, {}); works[p.id] = wk;
+        if (!p.coin) { p.coin = await findCoin(wk); if (run !== refRun) return; }
+      } catch (e) { p.coin = { ok: false }; }
+    }
+    var best = 0;
+    state.photos.forEach(function (p, k) { var b = state.photos[best].coin; if (p.coin && p.coin.ok && (!b || !b.ok || p.coin.ratio > b.ratio + 0.01)) best = k; });
+    if (best > 0) { var mv = state.photos.splice(best, 1)[0]; state.photos.unshift(mv); renderThumbs(); }
+    var ref = state.photos[0];
+    if (!works[ref.id]) { try { works[ref.id] = HLC.toWork(await loadImageData(ref.file), {}); } catch (e) { works[ref.id] = null; } if (run !== refRun) return; }
+    var changed = !state.work1 || state.work1For !== ref.id;
+    state.work1 = works[ref.id]; state.work1For = ref.id; state.ref.scanning = false;
+    state.ref.autoFound = !!(ref.coin && ref.coin.ok); state.ref.reordered = best > 0;
+    if (changed || !state.ref.tap) {
+      resetRef();
+      if (state.ref.kind === 'coin' && ref.coin && ref.coin.ok && !state.ref.manual) { state.ref.tap = ref.coin.tap; refit(); }
+    }
     renderRefControls();
+  }
+  function autoTapCoin() {   // used when the kind is switched back to coin
+    var ref = state.photos[0];
+    if (state.ref.kind === 'coin' && !state.ref.manual && ref && ref.coin && ref.coin.ok) { state.ref.tap = ref.coin.tap; refit(); }
   }
 
   // ---------------------------------------------------------------- analysis

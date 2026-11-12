@@ -3,6 +3,7 @@ importScripts('engine.js');
 self.onmessage = async function (e) {
   var d = e.data;
   try {
+    if (d.op === 'coin') { self.postMessage({ id: d.id, type: 'done', result: HLC.findCoin(d.work) }); return; }
     var r = await HLC.analyzeFree(d.imgs, d.opt, function (p, l) { self.postMessage({ id: d.id, type: 'progress', p: p, label: l }); });
     var tr = [];
     if (r.ok) { tr.push(r.work.rgba.buffer); r.hairs.forEach(function (h) { tr.push(h.pts.buffer); }); }

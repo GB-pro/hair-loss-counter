@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   var HLC = {};
-  HLC.version = '2.1.0';
+  HLC.version = '2.2.0';
 
   var DEFAULTS = {
     workWidth: 1260,        // rectified sheet width in px (~6 px/mm on A4)
@@ -1237,6 +1237,116 @@
     for (cy = c1[2] - 4; cy <= c1[2] + 4; cy += 1) for (cx = c1[1] - 4; cx <= c1[1] + 4; cx += 1) for (r = c1[3] - 3; r <= c1[3] + 3; r += 0.5) { s2 = score(cx, cy, r); if (s2 > best[0]) best = [s2, cx, cy, r]; }
     if (best[0] < 4 || best[3] < 14) return { ok: false, reason: 'no-object' };
     return { ok: true, kind: 'coin', cx: x0 + best[1], cy: y0 + best[2], r: best[3], pxPerMm: 2 * best[3] / mm, shapeOk: true, edge: best[0] };
+  }
+
+  // ---------------------------------------------------------------- automatic coin finding (no tap)
+  // Circle centres are voted along the brightness gradient; each peak is then checked with fitCoin, which needs
+  // a contrast step nearly all the way round (a loop of hair has the same surface inside and outside, a coin does not).
+  // Returns the best coin and how round it looks (minor/major axis), which tells the straight-down photo.
+  HLC.findCoin = function (work, opt) {
+    opt = opt || {};
+    var W = work.width, H = work.height, px = work.data, f = 2, w = Math.floor(W / f), h = Math.floor(H / f), x, y, i;
+    var g = new Float32Array(w * h);
+    for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
+      var r = 0, gg = 0, b = 0, mx = 0, mn = 0;
+      for (var dy = 0; dy < f; dy++) for (var dx = 0; dx < f; dx++) { var q = ((y * f + dy) * W + x * f + dx) * 4; r += px[q]; gg += px[q + 1]; b += px[q + 2]; }
+      r /= f * f; gg /= f * f; b /= f * f; mx = Math.max(r, gg, b); mn = Math.min(r, gg, b);
+      g[y * w + x] = mx + 0.5 * (r + gg + b) / 3 - 0.5 * mn;
+    }
+    g = convSep(g, w, h, gaussKernel(1.5));
+    var gx = new Float32Array(w * h), gy = new Float32Array(w * h), mag = new Float32Array(w * h), mags = [];
+    for (y = 1; y < h - 1; y++) for (x = 1; x < w - 1; x++) {
+      i = y * w + x; gx[i] = (g[i + 1] - g[i - 1]) / 2; gy[i] = (g[i + w] - g[i - w]) / 2; mag[i] = Math.hypot(gx[i], gy[i]);
+      if ((i & 7) === 0) mags.push(mag[i]);
+    }
+    mags.sort(function (a, b2) { return a - b2; });
+    var thr = Math.max(3, mags[Math.floor(mags.length * 0.97)] || 0);
+    var rMin = Math.max(6, Math.round((opt.rMinFrac || 0.012) * Math.max(w, h))), rMax = Math.round((opt.rMaxFrac || 0.12) * Math.max(w, h));
+    var acc = new Float32Array(w * h);
+    for (y = 2; y < h - 2; y++) for (x = 2; x < w - 2; x++) {
+      i = y * w + x; var m = mag[i]; if (m < thr) continue;
+      var ux = gx[i] / m, uy = gy[i] / m, wt = Math.min(m, 4 * thr);
+      for (var sgn = -1; sgn <= 1; sgn += 2) for (var rr = rMin; rr <= rMax; rr += 1) {
+        var cx = Math.round(x + sgn * ux * rr), cy = Math.round(y + sgn * uy * rr);
+        if (cx < 0 || cy < 0 || cx >= w || cy >= h) break;
+        acc[cy * w + cx] += wt / rr;          // a full circle gives ~2*pi*wt whatever its size
+      }
+    }
+    acc = convSep(acc, w, h, gaussKernel(1.5));
+    var peaks = [];
+    for (y = 3; y < h - 3; y++) for (x = 3; x < w - 3; x++) {
+      i = y * w + x; var v = acc[i]; if (v <= 0) continue;
+      var isMax = true;
+      for (var yy = -3; yy <= 3 && isMax; yy++) for (var xx = -3; xx <= 3; xx++) if ((yy || xx) && acc[i + yy * w + xx] > v) { isMax = false; break; }
+      if (isMax) peaks.push([v, x, y]);
+    }
+    peaks.sort(function (a, b2) { return b2[0] - a[0]; });
+    var best = null, tried = [];
+    for (var k = 0; k < peaks.length && tried.length < (opt.maxTry || 24); k++) {
+      var P = peaks[k], X = P[1] * f + f / 2, Y = P[2] * f + f / 2;
+      if (tried.some(function (t) { return Math.hypot(t[0] - X, t[1] - Y) < 2 * rMin * f; })) continue;
+      tried.push([X, Y]);
+      var c = fitCoin(work, { x: X, y: Y }, 25);
+      if (!c.ok || c.r < rMin * f * 0.8) continue;
+      var shape = coinShape(work, c);
+      var sc = c.edge * shape.full * shape.sym * (0.5 + 0.5 * shape.ratio);
+      if (shape.full < 0.8 || shape.fill < 0.6 || shape.sym < 0.6) continue;   // a solid disc with the same rim all round
+      if (!best || sc > best.score) best = { ok: true, cx: c.cx, cy: c.cy, r: c.r, rMajor: shape.rMajor, ratio: shape.ratio, edge: c.edge, score: sc };
+      if (shape.sym > 0.9 && shape.fill > 0.9 && c.edge > 2 * (opt.minEdge || 10)) break;   // clearly a coin: stop looking
+    }
+    if (!best || best.edge < (opt.minEdge || 10)) return { ok: false, reason: 'no-coin', best: best };
+    best.tap = [best.cx / W, best.cy / H];
+    return best;
+  };
+  // radius of the coin edge in 72 directions -> roundness (minor/major) and how much of the rim was found
+  function coinShape(work, c) {
+    var W = work.width, H = work.height, px = work.data, NA = 72, rad = new Array(NA).fill(0), found = 0, sgnSum = 0, ins = [], outs = [], profs = [], inRgb = [], outRgb = [];
+    function rgbAt(fx, fy) { var xi = Math.round(fx), yi = Math.round(fy); if (xi < 0 || yi < 0 || xi >= W || yi >= H) return null; var q = (yi * W + xi) * 4; return [px[q], px[q + 1], px[q + 2]]; }
+    function lum(fx, fy) {
+      var xi = Math.floor(fx), yi = Math.floor(fy); if (xi < 0 || yi < 0 || xi >= W - 1 || yi >= H - 1) return -1;
+      var q = (yi * W + xi) * 4, ax = fx - xi, ay = fy - yi, o = 0;
+      [[0, 0, (1 - ax) * (1 - ay)], [1, 0, ax * (1 - ay)], [0, 1, (1 - ax) * ay], [1, 1, ax * ay]].forEach(function (t) { var p = q + (t[1] * W + t[0]) * 4; o += t[2] * (Math.max(px[p], px[p + 1], px[p + 2]) + 0.5 * (px[p] + px[p + 1] + px[p + 2]) / 3 - 0.5 * Math.min(px[p], px[p + 1], px[p + 2])); });
+      return o;
+    }
+    for (var a = 0; a < NA; a++) {
+      var cs = Math.cos(a * 2 * Math.PI / NA), sn = Math.sin(a * 2 * Math.PI / NA), bestG = 0, bestR = 0, bestS = 0;
+      for (var r = c.r * 0.6; r <= c.r * 1.4; r += 0.5) {
+        var o = lum(c.cx + (r + 1.5) * cs, c.cy + (r + 1.5) * sn), i2 = lum(c.cx + (r - 1.5) * cs, c.cy + (r - 1.5) * sn);
+        if (o < 0 || i2 < 0) continue;
+        var gd = Math.abs(o - i2); if (gd > bestG) { bestG = gd; bestR = r; bestS = o > i2 ? 1 : -1; }
+      }
+      if (bestG >= c.edge * 0.6) { rad[a] = bestR; found++; sgnSum += bestS; }
+      // inside (0.2-0.6 r) and outside (1.35-1.7 r) along this direction
+      var prof = []; for (var tq = 0.5; tq <= 1.501; tq += 0.05) prof.push(lum(c.cx + tq * c.r * cs, c.cy + tq * c.r * sn));
+      if (prof.every(function (v) { return v >= 0; })) profs.push(prof);
+      for (var tf = 0.15; tf <= 0.751; tf += 0.15) { var pi = rgbAt(c.cx + tf * c.r * cs, c.cy + tf * c.r * sn); if (pi) inRgb.push(pi); }
+      for (var tg = 1.35; tg <= 1.75; tg += 0.1) { var po = rgbAt(c.cx + tg * c.r * cs, c.cy + tg * c.r * sn); if (po) outRgb.push(po); }
+      for (var t = 0.2; t <= 0.6; t += 0.1) { var vi = lum(c.cx + t * c.r * cs, c.cy + t * c.r * sn); if (vi >= 0) ins.push(vi); }
+      for (var t2 = 1.35; t2 <= 1.7; t2 += 0.07) { var vo = lum(c.cx + t2 * c.r * cs, c.cy + t2 * c.r * sn); if (vo >= 0) outs.push(vo); }
+    }
+    if (found < 8) return { ratio: 0, rMajor: c.r, full: found / NA };
+    // opposite directions belong to one diameter: use diameters so an off-centre fit does not look like an ellipse
+    var dia = [];
+    for (var a2 = 0; a2 < NA / 2; a2++) { var r1 = rad[a2], r2 = rad[a2 + NA / 2]; if (r1 && r2) dia.push(r1 + r2); }
+    if (dia.length < 6) dia = rad.filter(function (v) { return v > 0; }).map(function (v) { return 2 * v; });
+    dia.sort(function (p, q) { return p - q; });
+    var lo = dia[Math.floor(dia.length * 0.1)], hi = dia[Math.floor(dia.length * 0.9)];
+    function mstd(a) { var m = 0; a.forEach(function (v) { m += v; }); m /= a.length || 1; var sd = 0; a.forEach(function (v) { sd += (v - m) * (v - m); }); return [m, Math.sqrt(sd / (a.length || 1))]; }
+    // filled disc: the inside differs in colour or brightness from the surface around it (a loop of hair does not)
+    var oc = [0, 1, 2].map(function (ch) { return medOf(outRgb.map(function (v) { return v[ch]; })); });
+    var od = outRgb.map(function (v) { return Math.max(Math.abs(v[0] - oc[0]), Math.abs(v[1] - oc[1]), Math.abs(v[2] - oc[2])); });
+    var tFill = Math.max(14, 2.5 * medOf(od.slice())), nFill = 0;
+    inRgb.forEach(function (v) { if (Math.max(Math.abs(v[0] - oc[0]), Math.abs(v[1] - oc[1]), Math.abs(v[2] - oc[2])) > tFill) nFill++; });
+    var fill = inRgb.length ? nFill / inRgb.length : 0;
+    var I = mstd(ins), O = mstd(outs), sym = 0;
+    // rotational symmetry: every direction should cross the same rim profile
+    if (profs.length >= 12) {
+      var z = profs.map(function (pr) { var ms = mstd(pr); return pr.map(function (v) { return (v - ms[0]) / (ms[1] + 1e-6); }); }), mean = z[0].map(function () { return 0; });
+      z.forEach(function (pr) { pr.forEach(function (v, k2) { mean[k2] += v / z.length; }); });
+      var mz = mstd(mean); mean = mean.map(function (v) { return (v - mz[0]) / (mz[1] + 1e-6); });
+      z.forEach(function (pr) { var cc = 0; pr.forEach(function (v, k2) { cc += v * mean[k2]; }); sym += cc / pr.length / z.length; });
+    }
+    return { ratio: lo / hi, rMajor: hi / 2, full: found / NA, polarity: Math.abs(sgnSum) / Math.max(1, found), contrast: Math.abs(I[0] - O[0]) / (I[1] + O[1] + 4), sym: sym, fill: fill, inStd: I[1], outStd: O[1] };
   }
 
   // ---------------------------------------------------------------- photo-to-photo alignment (homography, coarse-to-fine)

@@ -24,24 +24,19 @@
 
   <section class="card" aria-labelledby="h-capture">
     <h2 id="h-capture"><span class="step">01</span>3枚撮る</h2>
-    <p class="hint">洗面台などに毛を置き、横に硬貨かカードを1つ置きます。同じ場所を角度を変えて3枚撮ると、反射で見えない所を補えます。</p>
+    <p class="hint">洗面台などに毛を置き、横に硬貨を1つ置きます。同じ場所を角度を変えて3枚撮ると、反射で見えない所を補えます。撮る順番は自由です。硬貨がいちばん丸く写った写真（真上から撮ったもの）を自動で基準にします。</p>
     <div class="slots" id="slots">
-      <div class="slot"><b>1枚目</b>真上から<br>（長さの基準）</div>
-      <div class="slot"><b>2枚目</b>少し左に傾けて</div>
-      <div class="slot"><b>3枚目</b>少し右に傾けて</div>
+      <div class="slot"><b>真上から</b>（長さの基準）</div>
+      <div class="slot"><b>少し左に</b>傾けて</div>
+      <div class="slot"><b>少し右に</b>傾けて</div>
     </div>
     <div class="btn-row">
-      <label class="btn primary">カメラで撮る<input id="inCamera" type="file" accept="image/*" capture="environment"></label>
-      <label class="btn">写真を選ぶ<input id="inPick" type="file" accept="image/*"></label>
+      <button type="button" class="btn primary" id="btnCamera">カメラで撮る</button>
+      <label class="btn">写真を選ぶ（まとめて選べます）<input id="inPick" type="file" accept="image/*" multiple></label>
+      <input id="inCamera" class="hidden-input" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
     </div>
+    <p class="hint" id="camNote">アプリの中のカメラで、いちばん高い解像度とフラッシュを使って撮ります。閉じるとカメラは元どおりになり、スマホの設定は変えません。</p>
     <div id="thumbs" class="thumbs" aria-live="polite"></div>
-    <details class="fallback">
-      <summary>写真が選べないとき</summary>
-      <div class="fb-body">
-        <label for="inPick2" class="hint">標準のボタンからも選べます（まとめて選ぶ場合は写真を長押し）</label>
-        <input id="inPick2" type="file" accept="image/*" multiple>
-      </div>
-    </details>
   </section>
 
   <section class="card" aria-labelledby="h-ref">
@@ -186,6 +181,17 @@
 
   <footer>Hair Loss Counter <span id="ver"></span> · 写真は端末の外に出ません</footer>
 </main>
+<div class="cam" id="cam" hidden role="dialog" aria-modal="true" aria-label="カメラ">
+  <video id="camVideo" playsinline muted autoplay></video>
+  <div class="cam-guide" aria-hidden="true"></div>
+  <p class="cam-info" id="camInfo"></p>
+  <div class="cam-bar">
+    <button type="button" class="btn" id="camClose">閉じる</button>
+    <button type="button" class="cam-shutter" id="camShot" aria-label="撮る"></button>
+    <span class="cam-count" id="camCount">0 / 3</span>
+  </div>
+</div>
+
 <script src="engine.js"></script>
 <script src="app.js"></script>
 </body>
