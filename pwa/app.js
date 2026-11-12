@@ -46,7 +46,17 @@
   state.ref.kind = state.settings.kind; state.ref.country = COINS[state.settings.country] ? state.settings.country : 'JPY';
   state.ref.coin = Math.min(state.settings.coin, COINS[state.ref.country].coins.length - 1);
   state.records = lsGet(K_REC, []); if (!Array.isArray(state.records)) state.records = [];
+  // engine 2.1 traces hairs through dense clumps, so the measured total length is about 1.35x the 2.0 value.
+  // A correction learned with 2.0 is carried over by that factor instead of being thrown away.
+  var CAL_ENGINE = 2.1, CAL_SCALE_20 = 1.35;
+  function migrateCalib(c) {
+    if (!c || !(c.Leff > 0) || (c.engine || 2.0) >= CAL_ENGINE) return c;
+    c.Leff = +(c.Leff * CAL_SCALE_20).toFixed(1);
+    (c.samples || []).forEach(function (x) { if (x && x.Leff > 0) x.Leff = +(x.Leff * CAL_SCALE_20).toFixed(1); });
+    c.engine = CAL_ENGINE; return c;
+  }
   state.calib = lsGet(K_CAL, null);
+  if (state.calib && (state.calib.engine || 2.0) < CAL_ENGINE) { state.calib = migrateCalib(state.calib); lsSet(K_CAL, state.calib); }
   $('ver').textContent = 'v' + (window.HLC ? HLC.version : '');
   function saveSettings() { state.settings.kind = state.ref.kind; state.settings.country = state.ref.country; state.settings.coin = state.ref.coin; lsSet(K_SET, state.settings); }
   function saveBlob(blob, name) { var a = document.createElement('a'), u = URL.createObjectURL(blob); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(u); }, 30000); }
@@ -357,7 +367,7 @@
       if (rec.scaleFromRef && rec.confirmed > 0 && rec.paths > 0) {
         var c = state.calib ? JSON.parse(JSON.stringify(state.calib)) : { samples: [] };
         c.samples = (c.samples || []).concat([{ ts: rec.ts, Leff: +(rec.paths * rec.totalLengthMm / (rec.confirmed * rec.confirmed)).toFixed(1), n: rec.confirmed }]).slice(-20);
-        c.Leff = median(c.samples.map(function (x) { return x.Leff; })); state.calib = c; lsSet(K_CAL, c); msg += '補正を更新しました。';
+        c.Leff = median(c.samples.map(function (x) { return x.Leff; })); c.engine = CAL_ENGINE; state.calib = c; lsSet(K_CAL, c); msg += '補正を更新しました。';
       } else msg += '補正に使えるのは、比較物つきで撮った回だけです。';
     }
     state.saved = true; requestPersist();
@@ -456,7 +466,7 @@
       var have = {}, added = 0; state.records.forEach(function (r) { have[r.ts] = 1; });
       data.records.forEach(function (r) { if (r && typeof r.ts === 'number' && typeof r.confirmed === 'number' && !have[r.ts]) { state.records.push(r); have[r.ts] = 1; added++; } });
       state.records.sort(function (a, b) { return b.ts - a.ts; });
-      if (!state.calib && data.calib && data.calib.Leff > 0) { state.calib = data.calib; lsSet(K_CAL, state.calib); }
+      if (!state.calib && data.calib && data.calib.Leff > 0) { state.calib = migrateCalib(data.calib); lsSet(K_CAL, state.calib); }
       if (!persistRecords()) throw new Error('storage');
       renderHistory(); renderCalib(); hstatus(added + '件を読み込みました（重複は除きました）。', 'ok');
     } catch (err) { hstatus(err && err.message === 'storage' ? 'このブラウザに保存できませんでした。' : 'このファイルは読み込めませんでした。Hair Loss Counter で書き出したファイルを選んでください。', 'err'); }

@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   var HLC = {};
-  HLC.version = '2.0.0';
+  HLC.version = '2.1.0';
 
   var DEFAULTS = {
     workWidth: 1260,        // rectified sheet width in px (~6 px/mm on A4)
@@ -19,7 +19,7 @@
     sensitivity: 1.0,       // >1 finds fainter hairs (and more noise)
     minAreaPx: 15,
     minSkelPx: 15,
-    rMerge: 3, lSpur: 12, lBridge: 16, kDir: 15,
+    rMerge: 3, lSpur: 12, lBridge: 16, kDir: 15, maxNodeSpan: 24,
     uOdd: 0.37, uEven: 0.6,
     gapMax: 40, gapCos: 0.75, gapMaxInvalid: 150, gapCosInvalid: 0.6,
     minLenMm: 10,
@@ -578,12 +578,68 @@
     }
     return cn;
   }
+  // make the skeleton strictly 1-px (drop staircase pixels whose neighbours stay connected without them),
+  // so that every pixel with 3+ neighbours is a real branch point
+  function thinStairs(sk, W, H) {
+    for (var pass = 0; pass < 2; pass++) {
+      var removed = 0;
+      for (var y = 1; y < H - 1; y++) for (var x = 1; x < W - 1; x++) {
+        var p = y * W + x; if (!sk[p]) continue;
+        var nb = [], k;
+        for (k = 0; k < 8; k++) if (sk[p + N8y[k] * W + N8x[k]]) nb.push(k);
+        if (nb.length < 2) continue;
+        // components among the neighbours (8-adjacency between neighbour pixels)
+        var comp = nb.map(function (_, j) { return j; });
+        for (var a = 0; a < nb.length; a++) for (var b = a + 1; b < nb.length; b++) {
+          if (Math.abs(N8x[nb[a]] - N8x[nb[b]]) <= 1 && Math.abs(N8y[nb[a]] - N8y[nb[b]]) <= 1) {
+            var ca = comp[a], cb = comp[b]; for (var c = 0; c < comp.length; c++) if (comp[c] === cb) comp[c] = ca;
+          }
+        }
+        var one = true; for (var c2 = 1; c2 < comp.length; c2++) if (comp[c2] !== comp[0]) { one = false; break; }
+        if (!one) continue;
+        // keep line ends: removing p must not create a new end where the line simply continues (2 neighbours far apart)
+        if (nb.length === 2) {
+          var d = Math.abs(N8x[nb[0]] - N8x[nb[1]]) + Math.abs(N8y[nb[0]] - N8y[nb[1]]);
+          if (d > 1) continue;
+        }
+        sk[p] = 0; removed++;
+      }
+      if (!removed) break;
+    }
+    return sk;
+  }
+  // remove short side branches (end pixel -> branch point within maxLen). They are too short to become
+  // graph segments, but each one makes a branch point whose merge disc cuts the hair it sits on.
+  function pruneSpurs(sk, W, H, maxLen) {
+    for (var round = 0; round < 3; round++) {
+      var N = W * H, deg = new Uint8Array(N), p, k, y, x, cut = 0;
+      for (y = 1; y < H - 1; y++) for (x = 1; x < W - 1; x++) { p = y * W + x; if (sk[p]) { var d = 0; for (k = 0; k < 8; k++) d += sk[p + N8y[k] * W + N8x[k]]; deg[p] = d; } }
+      for (y = 1; y < H - 1; y++) for (x = 1; x < W - 1; x++) {
+        p = y * W + x; if (!sk[p] || deg[p] !== 1) continue;
+        var walk = [p], prev = -1, cur = p, hit = false;
+        while (walk.length <= maxLen) {
+          var nx = -1, cy = (cur / W) | 0, cx = cur - cy * W;
+          if (cx < 1 || cy < 1 || cx >= W - 1 || cy >= H - 1) break;
+          for (k = 0; k < 8; k++) { var q = cur + N8y[k] * W + N8x[k]; if (sk[q] && q !== prev && walk.indexOf(q) < 0) { if (deg[q] >= 3) { hit = true; break; } nx = q; } }
+          if (hit || nx < 0) break;
+          prev = cur; cur = nx; walk.push(cur);
+        }
+        if (hit && walk.length <= maxLen) { for (k = 0; k < walk.length; k++) sk[walk[k]] = 0; cut++; }
+      }
+      if (!cut) break;
+      thinStairs(sk, W, H);
+    }
+    return sk;
+  }
   function graphFromSk(sk, W, H, opt) {
+    if (opt.thinStairs !== false) { thinStairs(sk, W, H); if (opt.preSpur !== false) pruneSpurs(sk, W, H, opt.preSpurLen || opt.lSpur); }
     var N = W * H, cn = crossingNumber(sk, W, H), Jd = new Uint8Array(N), i, k;
+    var deg = new Uint8Array(N);
+    if (opt.thinStairs !== false) for (var yq = 1; yq < H - 1; yq++) for (var xq = 1; xq < W - 1; xq++) { var pq = yq * W + xq; if (sk[pq]) { var dg = 0; for (k = 0; k < 8; k++) dg += sk[pq + N8y[k] * W + N8x[k]]; deg[pq] = dg; } }
     var r = opt.rMerge, offs = [];
     for (var dy = -r; dy <= r; dy++) for (var dx = -r; dx <= r; dx++) if (dx * dx + dy * dy <= r * r + 1) offs.push([dx, dy]);
     for (i = 0; i < N; i++) {
-      if (sk[i] && cn[i] >= 3) {
+      if (sk[i] && (cn[i] >= 3 || deg[i] >= 3)) {
         var y = (i / W) | 0, x = i - y * W;
         for (k = 0; k < offs.length; k++) {
           var xx = x + offs[k][0], yy = y + offs[k][1];
@@ -592,6 +648,9 @@
       }
     }
     var nlab = new Int32Array(N), nn = label8(Jd, W, H, nlab);
+    var nbox = new Int32Array((nn + 1) * 4);
+    for (k = 0; k <= nn; k++) { nbox[k * 4] = W; nbox[k * 4 + 1] = H; nbox[k * 4 + 2] = -1; nbox[k * 4 + 3] = -1; }
+    for (i = 0; i < N; i++) if (nlab[i]) { var l4 = nlab[i] * 4, iy = (i / W) | 0, ix = i - iy * W; if (ix < nbox[l4]) nbox[l4] = ix; if (iy < nbox[l4 + 1]) nbox[l4 + 1] = iy; if (ix > nbox[l4 + 2]) nbox[l4 + 2] = ix; if (iy > nbox[l4 + 3]) nbox[l4 + 3] = iy; }
     var edge = new Uint8Array(N);
     for (i = 0; i < N; i++) edge[i] = (sk[i] && !nlab[i]) ? 1 : 0;
     var slab = new Int32Array(N), ns = label8(edge, W, H, slab);
@@ -602,7 +661,7 @@
     for (k = 1; k <= ns; k++) starts[k + 1] = starts[k] + counts[k];
     var pos = starts.slice(), pix = new Int32Array(starts[ns + 1]);
     for (i = 0; i < N; i++) if (slab[i]) pix[pos[slab[i]]++] = i;
-    var G = { W: W, H: H, nn: nn, ns: ns, chains: [], att: [], dirs: [], length: [] };
+    var G = { W: W, H: H, nn: nn, ns: ns, nbox: nbox, chains: [], att: [], dirs: [], length: [] };
     for (var s = 1; s <= ns; s++) {
       var seg = pix.subarray(starts[s], starts[s + 1]);
       var ch = chainOf(seg, slab, s, W, H);
@@ -688,8 +747,13 @@
     for (s = 0; s < G.ns; s++) {
       var a2 = G.att[s][0], b2 = G.att[s][1];
       if (a2 !== null && b2 !== null && G.length[s] < opt.lBridge) {
+        var ra = find(a2), rb = find(b2), bb = G.nbox;
+        if (ra !== rb && opt.maxNodeSpan) {   // do not let chains of bridges grow one crossing over a whole clump
+          var ex = Math.max(bb[ra * 4 + 2], bb[rb * 4 + 2]) - Math.min(bb[ra * 4], bb[rb * 4]), ey = Math.max(bb[ra * 4 + 3], bb[rb * 4 + 3]) - Math.min(bb[ra * 4 + 1], bb[rb * 4 + 1]);
+          if (Math.max(ex, ey) > opt.maxNodeSpan) continue;
+        }
         G.bridges.add(s);
-        var ra = find(a2), rb = find(b2); if (ra !== rb) parent[ra] = rb;
+        if (ra !== rb) { parent[ra] = rb; for (var z = 0; z < 2; z++) { bb[rb * 4 + z] = Math.min(bb[rb * 4 + z], bb[ra * 4 + z]); bb[rb * 4 + 2 + z] = Math.max(bb[rb * 4 + 2 + z], bb[ra * 4 + 2 + z]); } }
       }
     }
     G.att = G.att.map(function (at) { return at.map(function (x) { return x === null ? null : find(x); }); });
@@ -800,7 +864,14 @@
     for (s = 0; s < G.ns; s++) { if (G.bridges.has(s) || visited[s]) continue; hairs.push(walk(s, 0)); cycles++; }
     var out = hairs.map(function (segs) {
       var pts = [];
-      segs.forEach(function (se) { var ch = G.chains[se[0]]; if (se[1] === 0) for (var a4 = 0; a4 < ch.length; a4++) pts.push(ch[a4]); else for (var b4 = ch.length - 1; b4 >= 0; b4--) pts.push(ch[b4]); });
+      segs.forEach(function (se) {
+        var ch = G.chains[se[0]], first = se[1] === 0 ? ch[0] : ch[ch.length - 1];
+        if (opt.joinLine !== false && pts.length) {   // draw through the crossing / gap so the hair stays one line
+          var pa = pts[pts.length - 1], ay = (pa / W) | 0, ax = pa - ay * W, by = (first / W) | 0, bx = first - by * W, nn = Math.max(Math.abs(bx - ax), Math.abs(by - ay));
+          if (nn <= (opt.joinMax || 24)) for (var t5 = 1; t5 < nn; t5++) pts.push(Math.round(ay + (by - ay) * t5 / nn) * W + Math.round(ax + (bx - ax) * t5 / nn));
+        }
+        if (se[1] === 0) for (var a4 = 0; a4 < ch.length; a4++) pts.push(ch[a4]); else for (var b4 = ch.length - 1; b4 >= 0; b4--) pts.push(ch[b4]);
+      });
       return pts;
     });
     return { paths: out, terminals: terminals, cycles: cycles, gaplinks: gaplinks, nodes: nodePorts.size };
@@ -1079,6 +1150,15 @@
     if (mx > mn) { hue = mx === R ? ((G - B) / (mx - mn)) % 6 : mx === G ? (B - R) / (mx - mn) + 2 : (R - G) / (mx - mn) + 4; hue = (hue * 60 + 360) % 360; }
     return { I: I, Ib: Ib, m: m, valid: valid, obj: obj, glare: glare, surf: { r: R, g: G, b: B, L: (R + G + B) / 3, sat: mx ? (mx - mn) / mx : 0, hue: hue } };
   }
+  // polarity-free hair map: a hair is a thin line darker OR brighter than the surface. Dark and bright
+  // parts of one hair (shine, sharpening halos) then add up into one ridge instead of competing.
+  function unifiedDoG(m, W, H, beta, s1) {
+    var N = W * H, u = new Float32Array(N), i;
+    for (i = 0; i < N; i++) { var v = m[i]; u[i] = v > 0 ? v : -beta * v; }
+    var g1 = convSep(u, W, H, gaussKernel(s1)), g3 = convSep(u, W, H, gaussKernel(3.0)), D = new Float32Array(N);
+    for (i = 0; i < N; i++) D[i] = g1[i] - g3[i];
+    return D;
+  }
   function dogAndSharpness(m, valid, W, H) {
     var N = W * H, g1 = convSep(m, W, H, gaussKernel(1.0)), g3 = convSep(m, W, H, gaussKernel(3.0)), D = new Float32Array(N), i;
     for (i = 0; i < N; i++) D[i] = g1[i] - g3[i];
@@ -1254,7 +1334,8 @@
     else if (surf.hue >= 8 && surf.hue <= 48 && surf.sat > 0.22) { kind = 'brown'; warnings.push('surface-brown'); }
     else if (surf.L >= 175) { kind = 'light'; warnings.push('surface-white'); }
     // line filter on the reference photo
-    var LS = await orientedMaxMin(ds0.D, W, H, opt, progress, 0.1, 0.5);
+    var uni = opt.unify !== false, beta = brightOn ? (opt.betaDark != null ? opt.betaDark : 1) : (opt.betaLight != null ? opt.betaLight : 0.5), uSig = opt.uSig || 1.3;
+    var LS = await orientedMaxMin(uni ? unifiedDoG(P0.m, W, H, beta, uSig) : ds0.D, W, H, opt, progress, 0.1, 0.5);
     step('line'); await tick();
     var er = opt.alongRadius + 4, det = boxMaxMin(P0.valid, W, H, er, false);
     var stD = robustStats(LS.dark, det, N), stB = robustStats(LS.bright, det, N);
@@ -1280,7 +1361,7 @@
         if (dk.sharpness < 0.9) { warnings.push('fill-blurred'); await tick(); continue; }
         var o2 = {}; for (k in opt) o2[k] = opt[k];
         o2.roi = [Math.max(0, bx0 - 40), Math.max(0, by0 - 40), Math.min(W, bx1 + 41), Math.min(H, by1 + 41)];
-        var LK = await orientedMaxMin(dk.D, W, H, o2, null, 0, 1);
+        var LK = await orientedMaxMin(uni ? unifiedDoG(Pk.m, W, H, beta, uSig) : dk.D, W, H, o2, null, 0, 1);
         var roiMask = new Uint8Array(N);
         for (y = o2.roi[1]; y < o2.roi[3]; y++) for (x = o2.roi[0]; x < o2.roi[2]; x++) roiMask[y * W + x] = okK[y * W + x];
         var sD = robustStats(LK.dark, roiMask, N), sB = robustStats(LK.bright, roiMask, N);
@@ -1300,10 +1381,12 @@
     prog(0.82, 'segment');
     var sens = opt.sensitivity || 1, nd = nms(LS.dark, LS.argDark, W, H, opt.nTheta), nb = nms(LS.bright, LS.argBright, W, H, opt.nTheta);
     var md = hysteresis(nd, detM, W, H, stD.med + opt.kLo / sens * stD.sigma, stD.med + opt.kHi / sens * stD.sigma);
-    var mb = brightOn ? hysteresis(nb, detM, W, H, stB.med + opt.kLo / sens * stB.sigma, stB.med + opt.kHi / sens * stB.sigma) : new Uint8Array(N);
-    var dMax = maxFilter(LS.dark, W, H, 5), bMax = maxFilter(LS.bright, W, H, 5);
-    for (i = 0; i < N; i++) { if (md[i] && LS.dark[i] <= bMax[i]) md[i] = 0; if (mb[i] && LS.bright[i] <= dMax[i]) mb[i] = 0; }
-    if (brightOn && surf.sat > 0.15) {   // on a coloured surface a white hair also lowers the saturation
+    var mb = (brightOn && !uni) ? hysteresis(nb, detM, W, H, stB.med + opt.kLo / sens * stB.sigma, stB.med + opt.kHi / sens * stB.sigma) : new Uint8Array(N);
+    if (!uni) {   // separate dark / bright maps (v2.0): the weaker polarity nearby is taken as a side lobe
+      var dMax = maxFilter(LS.dark, W, H, 5), bMax = maxFilter(LS.bright, W, H, 5);
+      for (i = 0; i < N; i++) { if (md[i] && LS.dark[i] <= bMax[i]) md[i] = 0; if (mb[i] && LS.bright[i] <= dMax[i]) mb[i] = 0; }
+    }
+    if (brightOn && !uni && surf.sat > 0.15) {   // on a coloured surface a white hair also lowers the saturation
       var sv = new Float32Array(N);
       for (i = 0; i < N; i++) { var o4 = i * 4, mx2 = Math.max(fusedRgba[o4], fusedRgba[o4 + 1], fusedRgba[o4 + 2]), mn2 = Math.min(fusedRgba[o4], fusedRgba[o4 + 1], fusedRgba[o4 + 2]); sv[i] = mx2 ? (mx2 - mn2) / mx2 : 0; }
       var svb = background(sv, W, H, P0.valid), bl = new Int32Array(N), nbl = label8(mb, W, H, bl);
@@ -1318,14 +1401,32 @@
     var G = buildGraph(cl, W, H, opt), tr = traceHairs(G, opt, invalid);
     step('trace');
     var term = {}; tr.terminals.forEach(function (t) { term[t.pt[1] * W + t.pt[0]] = t.onCrossing; });
+    var mSm = uni ? convSep(P0.m, W, H, gaussKernel(1.0)) : null;
     var minLen = opt.minLenMm * pxmm, hairs = [], totalPx = 0, E = er + 8, cutCount = 0, flags = [];
     function nearFrame(px2, py2) { return px2 < E || py2 < E || px2 >= W - E || py2 >= H - E; }
+    // lines that hug the edge of an object / the table (a mat border, a coin rim) are edges, not hairs
+    var Ism = convSep(P0.I, W, H, gaussKernel(1.0)), nearObj = boxMaxMin(P0.obj, W, H, 8, true), lineSnr = 1 / (stD.sigma || 1), droppedEdge = 0, droppedSpeck = 0;
     tr.paths.forEach(function (p) {
-      var L = 0, Lc = 0, nw = 0, a;
+      var L = 0, Lc = 0, nw = 0, a, ne = 0, sr = 0, pol = 0, nEdge = 0;
+      for (a = 0; a < p.length; a++) {
+        var q = p[a]; if (nearObj[q] && !P0.obj[q]) ne++; sr += LS.dark[q]; if (mSm) pol += mSm[q];
+        // step edge test: a hair has the same surface on both sides, a table/mat border does not
+        var qy = (q / W) | 0, qx = q - qy * W, th = Math.PI * LS.argDark[q] / opt.nTheta, nx = -Math.sin(th), ny = Math.cos(th);
+        var ax2 = Math.round(qx + 4 * nx), ay2 = Math.round(qy + 4 * ny), bx2 = Math.round(qx - 4 * nx), by2 = Math.round(qy - 4 * ny);
+        if (ax2 >= 0 && ay2 >= 0 && bx2 >= 0 && by2 >= 0 && ax2 < W && bx2 < W && ay2 < H && by2 < H) {
+          var Ia = Ism[ay2 * W + ax2], Ib2 = Ism[by2 * W + bx2], Ic = Ism[q];
+          if (Math.abs(Ia - Ib2) > 1.5 * Math.abs(Ic - (Ia + Ib2) / 2) + 2) nEdge++;
+        }
+      }
+      if (opt.edgeFilter !== false && nEdge > 0.6 * p.length) { droppedEdge++; return; }
+      if (opt.edgeFilter !== false && ne > 0.5 * p.length) { droppedEdge++; return; }
+      sr = sr / p.length * lineSnr; pol /= p.length;
+      // chains of dust specks: weak, short, and neither clearly darker nor clearly brighter than the surface
+      if (uni && opt.speckFilter !== false && p.length < 40 * pxmm && sr < (opt.speckSnr || 12) && Math.abs(pol) < (opt.speckPol || 0.03)) { droppedSpeck++; return; }
       for (a = 1; a < p.length; a++) { var y1 = (p[a] / W) | 0, x1 = p[a] - y1 * W, y0 = (p[a - 1] / W) | 0, x0 = p[a - 1] - y0 * W, dd = Math.hypot(x1 - x0, y1 - y0); L += dd; Lc += Math.min(3, dd); }
       if (Lc >= 3 * pxmm) totalPx += Lc;
       if (L < minLen) return;
-      for (a = 0; a < p.length; a++) if (white[p[a]]) nw++;
+      for (a = 0; a < p.length; a++) if (uni ? (brightOn && mSm[p[a]] < 0) : white[p[a]]) nw++;
       var pts = new Int32Array(p.length * 2);
       for (a = 0; a < p.length; a++) { pts[2 * a] = p[a] % W; pts[2 * a + 1] = (p[a] / W) | 0; }
       var e0 = p[0], e1 = p[p.length - 1], c0 = nearFrame(pts[0], pts[1]), c1 = nearFrame(pts[pts.length - 2], pts[pts.length - 1]), x0c = term[e0] === true, x1c = term[e1] === true;
@@ -1344,7 +1445,7 @@
       work: { width: W, height: H, rgba: fusedRgba }, sharpness: sharpness, totalLengthMm: totalPx / pxmm, cutCount: cutCount,
       surface: { kind: kind, L: surf.L, sat: surf.sat, hue: surf.hue, rgb: [surf.r, surf.g, surf.b] },
       fusion: { photos: works.length, used: used, ncc: nccs, glarePx: needPx, filledPx: filledPx, remainPx: remainPx, objPx: objPx },
-      stats: { nodes: tr.nodes, gaplinks: tr.gaplinks }, timings: timings
+      stats: { nodes: tr.nodes, gaplinks: tr.gaplinks, droppedEdge: droppedEdge, droppedSpeck: droppedSpeck }, timings: timings
     };
   };
 
