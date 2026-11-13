@@ -2,69 +2,132 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; worker-src 'self'; manifest-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#3d7a1f">
-<meta name="description" content="抜け毛を写真で数えて記録するアプリ。写真も解析も記録も、あなたの端末の中だけ。インストール不要・通信なし。">
-<title>Hair Loss Counter</title>
+<meta name="theme-color" content="#f5f1e8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c1716" media="(prefers-color-scheme: dark)">
+<meta name="description" content="抜けゆく髪を写真で数えて記録するアプリ。写真も解析も記録も、あなたの端末の中だけ。インストール不要・通信なし。">
+<title>MOT'S HAIR COUNTER</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<div class="bg" aria-hidden="true">
+  <div class="bg-layer bg-marble" id="bg0"></div>
+  <div class="bg-layer bg-top" id="bg1"></div>
+  <div class="bg-layer bg-low" id="bg2"></div>
+  <div class="bg-glow"></div>
+  <div class="bg-veil"></div>
+</div>
 <main>
   <header class="top">
-    <h1>Hair Loss Counter<small>抜け毛を写真で数える<span class="tagline">毛髪もモツも長ぁ～い友達</span></small></h1>
-    <button type="button" class="chip" id="netChip" aria-controls="proofBox"><span class="dot"></span><span id="netText">通信なし</span></button>
+    <div class="orn" aria-hidden="true"><i></i></div>
+    <h1><span>MOT'S HAIR</span> <span>COUNTER</span></h1>
+    <p class="tag" data-i18n="app.sub">抜けゆく髪を数えて記録するアプリ</p>
+    <div class="orn low" aria-hidden="true"><i></i></div>
   </header>
-  <p class="note strong" id="lead">写真も解析も記録も、このスマホの中だけで完結します。機内モードでも使えます。</p>
-  <p class="note" id="iosHint" hidden>iPhoneでは、共有ボタンから「ホーム画面に追加」をして使ってください。追加しないと、7日間使わなかったときに記録が消えることがあります。</p>
-
-  <section class="card" aria-labelledby="h-capture">
-    <h2 id="h-capture"><span class="step">01</span>3枚撮る</h2>
-    <p class="hint">洗面台などに毛を置き、横に硬貨を1つ置きます。同じ場所を角度を変えて3枚撮ると、反射で見えない所を補えます。撮る順番は自由です。硬貨がいちばん丸く写った写真（真上から撮ったもの）を自動で基準にします。</p>
-    <div class="slots" id="slots">
-      <div class="slot"><b>真上から</b>（長さの基準）</div>
-      <div class="slot"><b>少し左に</b>傾けて</div>
-      <div class="slot"><b>少し右に</b>傾けて</div>
-    </div>
-    <div class="btn-row">
-      <button type="button" class="btn primary" id="btnCamera">カメラで撮る</button>
-      <label class="btn">写真を選ぶ（まとめて選べます）<input id="inPick" type="file" accept="image/*" multiple></label>
-      <input id="inCamera" class="hidden-input" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
-    </div>
-    <p class="hint" id="camNote">アプリの中のカメラで、いちばん高い解像度とフラッシュを使って撮ります。閉じるとカメラは元どおりになり、スマホの設定は変えません。</p>
-    <div id="thumbs" class="thumbs" aria-live="polite"></div>
-  </section>
+  <p class="note strong" id="lead" data-i18n="lead">写真も解析も記録も、このスマホの中だけで完結します。機内モードでも使えます。</p>
+  <p class="note" id="iosHint" hidden data-i18n="ios">iPhoneでは、共有ボタンから「ホーム画面に追加」をして使ってください。追加しないと、7日間使わなかったときに記録が消えることがあります。</p>
 
   <section class="card" aria-labelledby="h-ref">
-    <h2 id="h-ref"><span class="step">02</span>比較物を指定する</h2>
+    <h2 id="h-ref"><span class="step">01</span><span data-i18n="s1">比較物を指定する</span></h2>
     <div class="refrow">
-      <div class="field"><label for="selKind">種類</label>
-        <select id="selKind"><option value="coin">硬貨</option><option value="card">カード（クレジットカード大）</option><option value="none">なし（長さは測らない）</option></select></div>
-      <div class="field" id="fCountry"><label for="selCountry">通貨</label><select id="selCountry"></select></div>
+      <div class="field"><label for="selKind" data-i18n="kind">種類</label>
+        <select id="selKind"><option value="coin" data-i18n="kind.coin">硬貨</option><option value="card" data-i18n="kind.card">カード（クレジットカード大）</option><option value="none" data-i18n="kind.none">なし（長さは測らない）</option></select></div>
+      <div class="field" id="fCountry"><label for="selCountry" data-i18n="currency">通貨</label><select id="selCountry"></select></div>
     </div>
-    <div class="coins" id="coins" role="group" aria-label="硬貨を選ぶ"></div>
-    <p class="hint" id="refHint">1枚目の写真を入れると、ここに表示されます。</p>
-    <div class="pickwrap" id="pickWrap" hidden><canvas id="pick"></canvas></div>
-    <div class="btn-row" id="refTools" hidden>
-      <button class="btn small" type="button" id="btnRefMode">うまく合わない：両端を2回タップで指定</button>
-      <button class="btn small" type="button" id="btnRefClear">やり直す</button>
+    <div class="coins" id="coins" role="group" aria-label="硬貨を選ぶ" data-i18n-aria="coins.aria"></div>
+    <p class="hint" id="refNote"></p>
+  </section>
+
+  <section class="card" aria-labelledby="h-capture">
+    <h2 id="h-capture"><span class="step">02</span><span data-i18n="s2">3枚撮る</span></h2>
+    <p class="hint" data-i18n="s2.hint">洗面台などに毛を置き、横に硬貨を1つ置きます。同じ場所を角度を変えて3枚撮ると、反射で見えない所を補えます。撮る順番は自由です。硬貨がいちばん丸く写った写真（真上から撮ったもの）を自動で基準にします。</p>
+    <div class="slots" id="slots">
+      <div class="slot">
+        <svg class="pg" viewBox="0 0 72 60" aria-hidden="true">
+          <path class="pg-cone" d="M36 16 23 50h26z"/>
+          <path class="pg-ray" d="M36 16 23 50M36 16 49 50"/>
+          <path class="pg-axis" d="M36 17v32"/>
+          <rect class="pg-phone" x="21" y="7" width="30" height="7" rx="3"/>
+          <circle class="pg-lens" cx="36" cy="15.2" r="2.1"/>
+          <path class="pg-floor" d="M8 53.5h56"/>
+          <path class="pg-hair" d="M24 51c3-6 5 3 8-2s4 2 7-1"/>
+          <ellipse class="pg-coin" cx="47" cy="51" rx="4.5" ry="1.8"/>
+        </svg>
+        <b data-i18n="slot.top">真上から</b><small data-i18n="slot.top.sub">長さの基準</small>
+      </div>
+      <div class="slot">
+        <svg class="pg" viewBox="0 0 72 60" aria-hidden="true">
+          <path class="pg-cone" d="M50.6 17 23 50h26z"/>
+          <path class="pg-ray" d="M50.6 17 23 50M50.6 17 49 50"/>
+          <path class="pg-plumb" d="M36 49V13"/>
+          <path class="pg-axis" d="M50.3 18 36.5 49"/>
+          <g transform="rotate(30 53 13)"><rect class="pg-phone" x="38" y="9.5" width="30" height="7" rx="3"/><circle class="pg-lens" cx="53" cy="17.7" r="2.1"/></g>
+          <path class="pg-arrow" d="M14 12.5q9-7 20-4.5"/><path class="pg-head" d="M35.5 8.3 29.8 4.2 30.6 11z"/>
+          <path class="pg-floor" d="M8 53.5h56"/>
+          <path class="pg-hair" d="M24 51c3-6 5 3 8-2s4 2 7-1"/>
+          <ellipse class="pg-coin" cx="47" cy="51" rx="4.5" ry="1.8"/>
+        </svg>
+        <b data-i18n="slot.right">少し右に</b><small data-i18n="slot.tilt">傾けて</small>
+      </div>
+      <div class="slot">
+        <svg class="pg" viewBox="0 0 72 60" aria-hidden="true">
+          <path class="pg-cone" d="M21.4 17 23 50h26z"/>
+          <path class="pg-ray" d="M21.4 17 23 50M21.4 17 49 50"/>
+          <path class="pg-plumb" d="M36 49V13"/>
+          <path class="pg-axis" d="M21.7 18 35.5 49"/>
+          <g transform="rotate(-30 19 13)"><rect class="pg-phone" x="4" y="9.5" width="30" height="7" rx="3"/><circle class="pg-lens" cx="19" cy="17.7" r="2.1"/></g>
+          <path class="pg-arrow" d="M58 12.5q-9-7-20-4.5"/><path class="pg-head" d="M36.5 8.3 42.2 4.2 41.4 11z"/>
+          <path class="pg-floor" d="M8 53.5h56"/>
+          <path class="pg-hair" d="M24 51c3-6 5 3 8-2s4 2 7-1"/>
+          <ellipse class="pg-coin" cx="47" cy="51" rx="4.5" ry="1.8"/>
+        </svg>
+        <b data-i18n="slot.left">少し左に</b><small data-i18n="slot.tilt">傾けて</small>
+      </div>
     </div>
-    <p class="status" id="refStatus" role="status"></p>
-    <button id="btnAnalyze" class="btn primary" disabled>解析する</button>
+    <div class="shoot">
+      <button type="button" class="tile" id="btnCamera">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 8h2.6l1.5-2.2h6.8L16.9 8h2.6A1.5 1.5 0 0 1 21 9.500V18a1.5 1.5 0 0 1-1.5 1.500h-15A1.5 1.5 0 0 1 3 18V9.500A1.5 1.5 0 0 1 4.5 8z"/><circle cx="12" cy="13.5" r="3.6"/></svg>
+        <b data-i18n="cam.btn">カメラで撮る</b><small id="camSub"></small>
+      </button>
+      <label class="tile">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="15" height="13" rx="2"/><path d="M7 4h12a2 2 0 0 1 2 2v11"/><path d="m5.5 17 3.7-3.9 2.9 2.9 1.9-1.9 3 3"/><circle cx="8" cy="11" r="1.2"/></svg>
+        <b data-i18n="pick.btn">写真を選ぶ</b><small data-i18n="pick.sub">まとめて選べます</small>
+        <input id="inPick" type="file" accept="image/*" multiple>
+      </label>
+    </div>
+    <input id="inCamera" class="hidden-input" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+    <p class="hint" id="camNote"></p>
+    <div id="thumbs" class="thumbs" aria-live="polite"></div>
+    <div class="keep" id="keepBox" hidden>
+      <button class="btn small" type="button" id="btnKeep" data-i18n="keep.btn">撮った写真を端末に保存</button>
+      <p class="hint" data-i18n="keep.hint">ここで撮った写真はアプリの中に一時的にあるだけで、スマホのアルバムには入りません。残すときは上のボタンで保存してください。</p>
+      <p class="status" id="keepStatus" role="status"></p>
+    </div>
+    <div class="refcheck" id="refCheck" hidden>
+      <p class="hint" id="refHint"></p>
+      <div class="pickwrap" id="pickWrap" hidden><canvas id="pick"></canvas></div>
+      <div class="btn-row" id="refTools" hidden>
+        <button class="btn small" type="button" id="btnRefMode"></button>
+        <button class="btn small" type="button" id="btnRefClear" data-i18n="ref.clear">やり直す</button>
+      </div>
+      <p class="status" id="refStatus" role="status"></p>
+    </div>
+    <button id="btnAnalyze" class="btn primary big" disabled>解析する</button>
     <div id="progress" class="progress" hidden>
       <div class="bar"><i id="barFill"></i></div>
-      <div class="ptext" id="pText">準備中</div>
+      <div class="ptext" id="pText"></div>
     </div>
   </section>
 
   <section class="card" aria-labelledby="h-result" id="resultCard" hidden>
-    <h2 id="h-result"><span class="step">03</span>結果</h2>
+    <h2 id="h-result"><span class="step">03</span><span data-i18n="s3">結果</span></h2>
     <div class="readout">
-      <div class="num" id="rNum">—<small>本</small></div>
+      <div class="num" id="rNum">—</div>
       <div class="meta"><div id="rPer"></div><div id="rSpread"></div></div>
     </div>
     <div class="alerts" id="rAlerts"></div>
@@ -72,126 +135,146 @@
     <div class="viewer">
       <div class="tabs" id="tabs"></div>
       <div class="canvas-wrap" id="cwrap"><canvas id="ov"></canvas></div>
-      <p class="legend">線の色は、ひと続きにたどれた毛です。絡まった所では1本の毛が何本かに分かれます。</p>
+      <p class="legend" data-i18n="legend.lines">線の色は、ひと続きにたどれた毛です。絡まった所では1本の毛が何本かに分かれます。</p>
     </div>
-    <h3 class="sub">長さの分布（最長→最短を20区間）</h3>
-    <svg class="histo" id="histo" viewBox="0 0 560 170" role="img" aria-label="たどれた毛の長さの分布"></svg>
-    <p class="legend">たどれた線の長さです。絡まって途中で切れた毛は、実際より短く出ます。</p>
+    <h3 class="sub" data-i18n="histo.title">長さの分布（最長→最短を20区間）</h3>
+    <svg class="histo" id="histo" viewBox="0 0 560 210" role="img" aria-label="たどれた毛の長さの分布" data-i18n-aria="histo.aria"></svg>
+    <p class="legend" data-i18n="histo.legend">たどれた線の長さです。絡まって途中で切れた毛は、実際より短く出ます。</p>
     <div class="confirm" id="confirmBox">
       <div class="stepper">
-        <label for="inConfirm">確定する本数</label>
-        <button type="button" id="btnMinus" aria-label="1本減らす">−</button>
+        <label for="inConfirm" data-i18n="cf.label">確定する本数</label>
+        <button type="button" id="btnMinus" aria-label="1本減らす" data-i18n-aria="cf.minus">−</button>
         <input id="inConfirm" type="number" inputmode="numeric" min="0" step="1" value="0">
-        <button type="button" id="btnPlus" aria-label="1本増やす">＋</button>
+        <button type="button" id="btnPlus" aria-label="1本増やす" data-i18n-aria="cf.plus">＋</button>
       </div>
-      <label class="check"><input type="checkbox" id="inVerified"><span>この本数は実際に数えて確かめた（あなたの髪に合わせた補正に使います）</span></label>
-      <div class="field"><label for="inMemo">メモ（任意）</label><input id="inMemo" type="text" maxlength="200" placeholder="例：朝のブラッシング"></div>
+      <label class="check"><input type="checkbox" id="inVerified"><span data-i18n="cf.verified">この本数は実際に数えて確かめた（あなたの髪に合わせた補正に使います）</span></label>
+      <div class="field"><label for="inMemo" data-i18n="memo">メモ（任意）</label><input id="inMemo" type="text" maxlength="200" placeholder="例：朝のブラッシング" data-i18n-ph="memo.ph"></div>
       <div class="btn-row">
         <button class="btn primary" id="btnSave">記録する</button>
-        <button class="btn" id="btnImg">色分け画像を保存</button>
-        <button class="btn" id="btnZip">結果一式を保存（ZIP）</button>
+        <button class="btn" id="btnImg" data-i18n="img.btn">色分け画像を保存</button>
+        <button class="btn" id="btnZip" data-i18n="zip.btn">結果一式を保存（ZIP）</button>
       </div>
       <p class="status" id="saveStatus" role="status"></p>
-      <p class="hint">記録するのは数値とファイル名だけです。画像はアプリの中に残りません。残したい画像は、上のボタンで端末に保存してください。</p>
+      <p class="hint" data-i18n="save.hint">記録するのは数値とファイル名だけです。画像はアプリの中に残りません。残したい画像は、上のボタンで端末に保存してください。</p>
     </div>
   </section>
 
   <section class="card" aria-labelledby="h-hist">
-    <h2 id="h-hist"><span class="step">04</span>記録</h2>
-    <svg class="trend" id="trend" viewBox="0 0 560 150" role="img" aria-label="確定本数の推移" hidden></svg>
-    <ul class="hist" id="hist"></ul>
-    <p class="hint" id="histEmpty">記録するとここに並び、本数の推移がグラフになります。</p>
-    <p class="note">記録はこのブラウザの中だけにあります。ブラウザの「サイトのデータ」を消すと、記録も消えます。控えは下のボタンで書き出せます。</p>
+    <h2 id="h-hist"><span class="step">04</span><span data-i18n="s4">記録</span></h2>
+    <div class="hsum" id="hSum" hidden>
+      <div><small data-i18n="sum.latest">最新</small><b id="sLatest">—</b><span id="sLatestDate"></span></div>
+      <div><small data-i18n="sum.avg7">直近7回の平均</small><b id="sAvg">—</b></div>
+      <div><small data-i18n="sum.total">記録の数</small><b id="sTotal">0</b></div>
+    </div>
+    <div class="seg" id="trendRange" role="group" hidden></div>
+    <svg class="trend" id="trend" viewBox="0 0 560 196" role="img" aria-label="確定本数の推移" data-i18n-aria="tr.aria" hidden></svg>
+    <p class="legend" id="trendNote" hidden></p>
+    <div class="hist" id="hist"></div>
+    <p class="hint" id="histEmpty" data-i18n="h.empty">記録するとここに並び、本数の推移がグラフになります。</p>
+    <p class="note" data-i18n="h.note">記録はこのブラウザの中だけにあります。ブラウザの「サイトのデータ」を消すと、記録も消えます。控えは下のボタンで書き出せます。</p>
     <div class="btn-row">
-      <button class="btn small" id="btnExport" type="button">記録を書き出す</button>
-      <label class="btn small fileimport">記録を読み込む<input id="inImport" type="file" accept="application/json,.json"></label>
-      <button class="btn small" id="btnShare" type="button">シェア用の画像を作る</button>
+      <button class="btn small" id="btnExport" type="button" data-i18n="exp.btn">記録を書き出す</button>
+      <label class="btn small fileimport"><span data-i18n="imp.btn">記録を読み込む</span><input id="inImport" type="file" accept="application/json,.json"></label>
+      <button class="btn small" id="btnShare" type="button" data-i18n="share.btn">シェア用の画像を作る</button>
     </div>
     <p class="status" id="histStatus" role="status"></p>
     <div id="shareBox" hidden>
       <div class="sharewrap"><canvas id="shareCv" width="1080" height="1080"></canvas></div>
-      <p class="hint">写真は入りません。本数と推移のグラフだけの画像です。</p>
+      <p class="hint" data-i18n="share.hint">写真は入りません。本数と推移のグラフだけの画像です。</p>
       <div class="btn-row">
-        <button class="btn small" id="btnShareSave" type="button">画像を保存</button>
-        <button class="btn small" id="btnShareSend" type="button" hidden>共有する</button>
+        <button class="btn small" id="btnShareSave" type="button" data-i18n="share.save">画像を保存</button>
+        <button class="btn small" id="btnShareSend" type="button" hidden data-i18n="share.send">共有する</button>
       </div>
     </div>
   </section>
 
-  <details class="card" id="proofBox">
-    <summary>外に出ていないことを確かめる</summary>
-    <div class="proof">
-      <div class="row"><span>外部への通信</span><b id="pExt" class="zero">0 件</b></div>
-      <div class="row"><span>ブロックした通信の試み</span><b id="pBlocked" class="zero">0 件</b></div>
-      <div class="row"><span>アプリ本体のファイル読み込み</span><b id="pOwn">0 件</b></div>
-      <div class="row"><span>オフラインでの利用</span><b id="pOffline">確認中</b></div>
-      <div class="row"><span>記録の保護</span><b id="pPersist">確認中</b></div>
-    </div>
-    <ul class="tips">
-      <li>このページには「外部へ一切通信しない」という設定（CSP）が入っています。コードが通信しようとしても、ブラウザが止めます。</li>
-      <li>確かめ方：スマホを機内モードにして、撮影から記録まで使ってみてください。全部そのまま動きます。</li>
-      <li>通信が起きるのは、このアプリ本体のファイルを取りに行くとき（最初に開いたときと、更新があるとき）だけです。写真・解析結果・記録は送りません。</li>
-      <li>サーバーにはアカウントもデータベースもありません。アクセス解析や広告のコードも入れていません。</li>
-      <li>「記録の保護」が「通常」のときは、スマホの空き容量が少ないと、ブラウザが記録を消すことがあります。ホーム画面に追加すると消されにくくなります。</li>
-      <li id="srcRow" hidden>ソースコードは公開しています。<span id="srcLink"></span></li>
-    </ul>
-  </details>
-
   <details class="card">
-    <summary>上手に撮るコツ</summary>
+    <summary data-i18n="tips">上手に撮るコツ</summary>
     <ul class="tips">
-      <li>1枚目は真上から。斜めの写真は長さの基準にできません。</li>
-      <li>3枚とも、毛と比較物の全体が入るように、ほぼ同じ距離で撮ります。</li>
-      <li>無地の台が向いています。大理石模様・木目・傷の多い台は、模様を毛と間違えます。</li>
-      <li>白い台では白髪、黒い台では黒い毛、茶色い台では茶色い毛が数えられません。</li>
-      <li>硬貨やカードは毛に重ねず、少し離して置きます。</li>
-      <li>塊は軽くほぐすと精度が上がります。</li>
-      <li>最初の1〜3回は、手で数えた本数を「確かめた」で記録してください。あなたの髪の長さに合わせて補正されます。髪を切ったら、もう一度お願いします。</li>
+      <li data-i18n="tip.1">1枚は真上から撮ります。斜めの写真は長さの基準にできません。</li>
+      <li data-i18n="tip.2">3枚とも、毛と比較物の全体が入るように、ほぼ同じ距離で撮ります。</li>
+      <li data-i18n="tip.3">無地の台が向いています。大理石模様・木目・傷の多い台は、模様を毛と間違えます。</li>
+      <li data-i18n="tip.4">白い台では白髪、黒い台では黒い毛、茶色い台では茶色い毛が数えられません。</li>
+      <li data-i18n="tip.5">硬貨やカードは毛に重ねず、少し離して置きます。</li>
+      <li data-i18n="tip.6">塊は軽くほぐすと精度が上がります。</li>
+      <li data-i18n="tip.7">最初の1〜3回は、手で数えた本数を「確かめた」で記録してください。あなたの髪の長さに合わせて補正されます。髪を切ったら、もう一度お願いします。</li>
     </ul>
   </details>
 
   <details class="card" id="settingsBox">
-    <summary>設定</summary>
+    <summary data-i18n="set">設定</summary>
     <div class="set">
-      <div class="row"><label for="inSens">検出の感度</label><span class="val" id="vSens">1.0</span></div>
+      <div class="row"><label for="inSens" data-i18n="set.sens">検出の感度</label><span class="val" id="vSens">1.0</span></div>
       <input id="inSens" type="range" min="0.6" max="1.6" step="0.1" value="1.0">
-      <span class="hint">上げると薄い毛も拾いますが、傷やゴミも拾いやすくなります。</span>
+      <span class="hint" data-i18n="set.sens.hint">上げると薄い毛も拾いますが、傷やゴミも拾いやすくなります。</span>
     </div>
     <div class="set">
-      <div class="row"><label for="inMinLen">数える最短の長さ</label><span class="val" id="vMinLen">10 mm</span></div>
+      <div class="row"><label for="inMinLen" data-i18n="set.minlen">数える最短の長さ</label><span class="val" id="vMinLen">10 mm</span></div>
       <input id="inMinLen" type="range" min="4" max="30" step="1" value="10">
     </div>
     <div class="set">
-      <div class="row"><span>本数の補正</span><span class="val" id="vCalib">未設定</span></div>
-      <span class="hint">比較物つきで撮り、「実際に数えて確かめた」で記録するたびに更新されます。</span>
-      <button class="btn small" id="btnCalibReset" type="button">補正を消す</button>
+      <div class="row"><label for="selCam" data-i18n="set.cam">「カメラで撮る」で開くカメラ</label></div>
+      <select id="selCam"><option value="system" data-i18n="set.cam.system">スマホ本体のカメラ（本体と同じ画質）</option><option value="inapp" data-i18n="set.cam.inapp">アプリ内カメラ（続けて撮影・ライト自動）</option></select>
     </div>
     <div class="set">
-      <div class="row"><span>すべての記録</span><span class="val" id="vCount">0 件</span></div>
-      <button class="btn small danger" id="btnWipe" type="button">記録と設定をすべて消す</button>
+      <div class="row"><span data-i18n="set.calib">本数の補正</span><span class="val" id="vCalib"></span></div>
+      <span class="hint" data-i18n="set.calib.hint">比較物つきで撮り、「実際に数えて確かめた」で記録するたびに更新されます。</span>
+      <button class="btn small" id="btnCalibReset" type="button"></button>
+    </div>
+    <div class="set">
+      <div class="row"><span data-i18n="set.all">すべての記録</span><span class="val" id="vCount"></span></div>
+      <button class="btn small danger" id="btnWipe" type="button"></button>
     </div>
   </details>
 
-  <details class="card">
-    <summary>このアプリについて</summary>
+  <details class="card" id="aboutBox">
+    <summary data-i18n="about">このアプリについて</summary>
     <ul class="tips">
-      <li>表示される本数は目安です。医療機器ではなく、診断や治療の判断はしません。気になる変化があるときは、医師に相談してください。</li>
+      <li data-i18n="about.med">表示される本数は目安です。医療機器ではなく、診断や治療の判断はしません。気になる変化があるときは、医師に相談してください。</li>
+    </ul>
+    <h3 class="sub" data-i18n="about.priv">外に出ていないことを確かめる</h3>
+    <div class="proof">
+      <div class="row"><span data-i18n="pf.ext">外部への通信</span><b id="pExt" class="zero">0</b></div>
+      <div class="row"><span data-i18n="pf.blocked">ブロックした通信の試み</span><b id="pBlocked" class="zero">0</b></div>
+      <div class="row"><span data-i18n="pf.own">アプリ本体のファイル読み込み</span><b id="pOwn">0</b></div>
+      <div class="row"><span data-i18n="pf.offline">オフラインでの利用</span><b id="pOffline"></b></div>
+      <div class="row"><span data-i18n="pf.persist">記録の保護</span><b id="pPersist"></b></div>
+    </div>
+    <ul class="tips">
+      <li data-i18n="pf.t1">このページには「外部へ一切通信しない」という設定（CSP）が入っています。コードが通信しようとしても、ブラウザが止めます。</li>
+      <li data-i18n="pf.t2">確かめ方：スマホを機内モードにして、撮影から記録まで使ってみてください。全部そのまま動きます。</li>
+      <li data-i18n="pf.t3">通信が起きるのは、このアプリ本体のファイルを取りに行くとき（最初に開いたときと、更新があるとき）だけです。写真・解析結果・記録は送りません。</li>
+      <li data-i18n="pf.t4">サーバーにはアカウントもデータベースもありません。アクセス解析や広告のコードも入れていません。</li>
+      <li data-i18n="pf.t5">「記録の保護」が「通常」のときは、スマホの空き容量が少ないと、ブラウザが記録を消すことがあります。ホーム画面に追加すると消されにくくなります。</li>
+      <li id="srcRow" hidden><span data-i18n="pf.src">ソースコードは公開しています。</span> <span id="srcLink"></span></li>
     </ul>
   </details>
 
-  <footer>Hair Loss Counter <span id="ver"></span> · 写真は端末の外に出ません</footer>
+  <section class="card langcard" aria-labelledby="h-lang">
+    <h2 id="h-lang" class="plain">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 2.6 4.2 5.6 4.2 9s-1.4 6.4-4.2 9c-2.8-2.6-4.2-5.6-4.2-9S9.2 5.6 12 3z"/></svg>
+      <span data-i18n="lang">言語</span><small lang="en">Language</small>
+    </h2>
+    <div class="langs" id="langs" role="group" aria-labelledby="h-lang"></div>
+  </section>
+
+  <footer><span class="brand">MOT'S HAIR COUNTER</span> <span id="ver"></span><br><span data-i18n="foot">写真は端末の外に出ません</span></footer>
 </main>
-<div class="cam" id="cam" hidden role="dialog" aria-modal="true" aria-label="カメラ">
+<div class="cam" id="cam" hidden role="dialog" aria-modal="true" aria-label="カメラ" data-i18n-aria="cam.aria">
   <video id="camVideo" playsinline muted autoplay></video>
   <div class="cam-guide" aria-hidden="true"></div>
   <p class="cam-info" id="camInfo"></p>
+  <button type="button" class="cam-light" id="camLight" aria-pressed="true" hidden>
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 5 13.500h5.500L9.5 22 19 9.500h-6z"/></svg><span data-i18n="cam.light">ライト</span>
+  </button>
   <div class="cam-bar">
-    <button type="button" class="btn" id="camClose">閉じる</button>
-    <button type="button" class="cam-shutter" id="camShot" aria-label="撮る"></button>
+    <button type="button" class="btn" id="camClose" data-i18n="cam.close">閉じる</button>
+    <button type="button" class="cam-shutter" id="camShot" aria-label="撮る" data-i18n-aria="cam.shot"></button>
     <span class="cam-count" id="camCount">0 / 3</span>
   </div>
 </div>
 
+<script src="i18n.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
 </body>
