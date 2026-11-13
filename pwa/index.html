@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; worker-src 'self'; manifest-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#f5f1e8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0c1716" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f5f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#f7f5f0" media="(prefers-color-scheme: dark)">
 <meta name="description" content="抜けゆく髪を写真で数えて記録するアプリ。写真も解析も記録も、あなたの端末の中だけ。インストール不要・通信なし。">
 <title>MOT'S HAIR COUNTER</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -25,7 +25,7 @@
 <main>
   <header class="top">
     <div class="orn" aria-hidden="true"><i></i></div>
-    <h1><span>MOT'S HAIR</span> <span>COUNTER</span></h1>
+    <h1><span class="emb" data-text="MOT'S HAIR COUNTER">MOT'S HAIR COUNTER</span></h1>
     <p class="tag" data-i18n="app.sub">抜けゆく髪を数えて記録するアプリ</p>
     <div class="orn low" aria-hidden="true"><i></i></div>
   </header>
@@ -49,42 +49,36 @@
     <div class="slots" id="slots">
       <div class="slot">
         <svg class="pg" viewBox="0 0 72 60" aria-hidden="true">
-          <path class="pg-cone" d="M36 16 23 50h26z"/>
-          <path class="pg-ray" d="M36 16 23 50M36 16 49 50"/>
-          <path class="pg-axis" d="M36 17v32"/>
-          <rect class="pg-phone" x="21" y="7" width="30" height="7" rx="3"/>
-          <circle class="pg-lens" cx="36" cy="15.2" r="2.1"/>
-          <path class="pg-floor" d="M8 53.5h56"/>
-          <path class="pg-hair" d="M24 51c3-6 5 3 8-2s4 2 7-1"/>
-          <ellipse class="pg-coin" cx="47" cy="51" rx="4.5" ry="1.8"/>
+          <path class="pg-mat" d="M15 40h42l12 15H3z"/>
+          <path class="pg-hair" d="M20 49c3-4 5-1 8-3s4 3 7 0 5-2 8 1M22 51.5c4-3 6 1 10-1.5s5-1 9 .5M24 46.5c2 1.5 5-2 8 0s4 2 7-.5M21 47.5c4 2 7-2 11 1s6 1 10-2M26 50c3-1.5 5 1 8-.5s4-2 7 0"/>
+          <ellipse class="pg-coin" cx="52.5" cy="48.5" rx="4.6" ry="1.9"/>
+          <path class="pg-cone" d="M36 16 19 51h34z"/>
+          <path class="pg-ray" d="M36 16 19 51M36 16 53 51"/>
+          <path class="pg-phone" d="M24 7h24l3.5 8.5h-31z"/><path class="pg-screen" d="M26.5 8.4h19l2.2 5.7H24.3z"/>
         </svg>
         <b data-i18n="slot.top">真上から</b><small data-i18n="slot.top.sub">長さの基準</small>
       </div>
       <div class="slot">
         <svg class="pg" viewBox="0 0 72 60" aria-hidden="true">
-          <path class="pg-cone" d="M50.6 17 23 50h26z"/>
-          <path class="pg-ray" d="M50.6 17 23 50M50.6 17 49 50"/>
-          <path class="pg-plumb" d="M36 49V13"/>
-          <path class="pg-axis" d="M50.3 18 36.5 49"/>
-          <g transform="rotate(30 53 13)"><rect class="pg-phone" x="38" y="9.5" width="30" height="7" rx="3"/><circle class="pg-lens" cx="53" cy="17.7" r="2.1"/></g>
-          <path class="pg-arrow" d="M14 12.5q9-7 20-4.5"/><path class="pg-head" d="M35.5 8.3 29.8 4.2 30.6 11z"/>
-          <path class="pg-floor" d="M8 53.5h56"/>
-          <path class="pg-hair" d="M24 51c3-6 5 3 8-2s4 2 7-1"/>
-          <ellipse class="pg-coin" cx="47" cy="51" rx="4.5" ry="1.8"/>
+          <path class="pg-mat" d="M15 40h42l12 15H3z"/>
+          <path class="pg-hair" d="M20 49c3-4 5-1 8-3s4 3 7 0 5-2 8 1M22 51.5c4-3 6 1 10-1.5s5-1 9 .5M24 46.5c2 1.5 5-2 8 0s4 2 7-.5M21 47.5c4 2 7-2 11 1s6 1 10-2M26 50c3-1.5 5 1 8-.5s4-2 7 0"/>
+          <ellipse class="pg-coin" cx="52.5" cy="48.5" rx="4.6" ry="1.9"/>
+          <path class="pg-cone" d="M52 14 19 51h34z"/>
+          <path class="pg-ray" d="M52 14 19 51M52 14 53 51"/>
+          <path class="pg-phone" d="M46 3.5 66 9l-4.5 8.5-19-6z"/><path class="pg-screen" d="M47.4 5.2 63.8 9.7l-3.3 6.2-15.6-4.900z"/>
+          <path class="pg-arrow" d="M14 15q10-11 25-11"/><path class="pg-head" d="M41 4 35.5.8v6.600z"/>
         </svg>
         <b data-i18n="slot.right">少し右に</b><small data-i18n="slot.tilt">傾けて</small>
       </div>
       <div class="slot">
         <svg class="pg" viewBox="0 0 72 60" aria-hidden="true">
-          <path class="pg-cone" d="M21.4 17 23 50h26z"/>
-          <path class="pg-ray" d="M21.4 17 23 50M21.4 17 49 50"/>
-          <path class="pg-plumb" d="M36 49V13"/>
-          <path class="pg-axis" d="M21.7 18 35.5 49"/>
-          <g transform="rotate(-30 19 13)"><rect class="pg-phone" x="4" y="9.5" width="30" height="7" rx="3"/><circle class="pg-lens" cx="19" cy="17.7" r="2.1"/></g>
-          <path class="pg-arrow" d="M58 12.5q-9-7-20-4.5"/><path class="pg-head" d="M36.5 8.3 42.2 4.2 41.4 11z"/>
-          <path class="pg-floor" d="M8 53.5h56"/>
-          <path class="pg-hair" d="M24 51c3-6 5 3 8-2s4 2 7-1"/>
-          <ellipse class="pg-coin" cx="47" cy="51" rx="4.5" ry="1.8"/>
+          <path class="pg-mat" d="M15 40h42l12 15H3z"/>
+          <path class="pg-hair" d="M20 49c3-4 5-1 8-3s4 3 7 0 5-2 8 1M22 51.5c4-3 6 1 10-1.5s5-1 9 .5M24 46.5c2 1.5 5-2 8 0s4 2 7-.5M21 47.5c4 2 7-2 11 1s6 1 10-2M26 50c3-1.5 5 1 8-.5s4-2 7 0"/>
+          <ellipse class="pg-coin" cx="52.5" cy="48.5" rx="4.6" ry="1.9"/>
+          <path class="pg-cone" d="M20 14 19 51h34z"/>
+          <path class="pg-ray" d="M20 14 19 51M20 14 53 51"/>
+          <path class="pg-phone" d="M26 3.5 6 9l4.5 8.5 19-6z"/><path class="pg-screen" d="M24.6 5.2 8.2 9.7l3.3 6.2 15.6-4.900z"/>
+          <path class="pg-arrow" d="M58 15q-10-11-25-11"/><path class="pg-head" d="M31 4 36.5.8v6.600z"/>
         </svg>
         <b data-i18n="slot.left">少し左に</b><small data-i18n="slot.tilt">傾けて</small>
       </div>
@@ -250,15 +244,13 @@
     </ul>
   </details>
 
-  <section class="card langcard" aria-labelledby="h-lang">
-    <h2 id="h-lang" class="plain">
-      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 2.6 4.2 5.6 4.2 9s-1.4 6.4-4.2 9c-2.8-2.6-4.2-5.6-4.2-9S9.2 5.6 12 3z"/></svg>
-      <span data-i18n="lang">言語</span><small lang="en">Language</small>
-    </h2>
-    <div class="langs" id="langs" role="group" aria-labelledby="h-lang"></div>
-  </section>
 
-  <footer><span class="brand">MOT'S HAIR COUNTER</span> <span id="ver"></span><br><span data-i18n="foot">写真は端末の外に出ません</span></footer>
+  <footer>
+    <label class="langpick">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 2.6 4.2 5.6 4.2 9s-1.4 6.4-4.2 9c-2.8-2.6-4.2-5.6-4.2-9S9.2 5.6 12 3z"/></svg>
+      <select id="selLang" aria-label="言語 / Language"></select>
+    </label>
+    <span class="brand">MOT'S HAIR COUNTER</span> <span id="ver"></span><br><span data-i18n="foot">写真は端末の外に出ません</span></footer>
 </main>
 <div class="cam" id="cam" hidden role="dialog" aria-modal="true" aria-label="カメラ" data-i18n-aria="cam.aria">
   <video id="camVideo" playsinline muted autoplay></video>

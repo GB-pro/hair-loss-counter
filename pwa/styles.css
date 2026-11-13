@@ -1,55 +1,35 @@
 /* MOT'S HAIR COUNTER — a quiet salon: white marble, gold and silver hairlines, deep blue-green ink.
    One column. The marble and the reliefs sit behind the page and drift at different speeds. */
 :root {
-  --marble: #f5f1e8;
-  --surface: rgba(255, 255, 255, 0.86);
+  --marble: #f7f5f0;
+  --surface: rgba(255, 255, 253, 0.88);
   --solid: #ffffff;
-  --well: rgba(246, 243, 236, 0.9);
-  --ink: #15302f;
-  --muted: #5a6866;
-  --line: rgba(168, 138, 72, 0.42);
-  --line-soft: rgba(126, 136, 142, 0.3);
-  --gold: #a07c33;
-  --gold-2: #d6bc7c;
-  --gold-soft: #f6eed9;
-  --silver: #a9b0b6;
-  --silver-soft: #eef0f1;
+  --well: rgba(244, 243, 239, 0.92);
+  --ink: #141414;
+  --muted: #5e5e5c;
+  --line: rgba(150, 154, 158, 0.55);
+  --line-soft: rgba(150, 154, 158, 0.32);
+  --gold: #a5813a;
+  --gold-2: #d4ba7e;
+  --gold-soft: #f7f0de;
+  --silver: #a7abaf;
+  --silver-soft: #eeeff0;
   --teal: #0f6f6b;
   --teal-2: #17908a;
   --teal-deep: #0a4f4d;
   --teal-ink: #ffffff;
-  --teal-soft: #e0f1ee;
+  --teal-soft: #e2f0ee;
   --accent: var(--teal);
   --warn: #a85f0c;
-  --warn-soft: #fbf0dc;
+  --warn-soft: #fbf1df;
   --bad: #b3362b;
-  --veil: rgba(255, 255, 255, 0.18);
-  --shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 22px 44px -30px rgba(52, 44, 20, 0.5);
+  --veil: rgba(255, 255, 255, 0.22);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 20px 40px -30px rgba(20, 20, 20, 0.45);
   --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif;
   --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Noto Serif", Georgia, "Times New Roman", serif;
   --font-display: "Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", "Noto Serif Display", "Noto Serif", Georgia, "Times New Roman", serif;
   --font-num: "Didot", "Bodoni 72", "Noto Serif", Georgia, "Times New Roman", serif;
   color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --marble: #0c1716; --surface: rgba(17, 30, 29, 0.84); --solid: #13211f; --well: rgba(9, 20, 19, 0.7);
-    --ink: #edf2f0; --muted: #a4b3b0; --line: rgba(208, 178, 112, 0.4); --line-soft: rgba(170, 182, 188, 0.24);
-    --gold: #d5b56d; --gold-2: #e5cf97; --gold-soft: #2c2616; --silver: #8d979d; --silver-soft: #1b2928;
-    --teal: #4fbdb3; --teal-2: #1c938b; --teal-deep: #0f6a66; --teal-ink: #ffffff; --teal-soft: #14322f;
-    --warn: #efa652; --warn-soft: #3a2b17; --bad: #f07466; --veil: rgba(7, 16, 15, 0.8);
-    --shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 22px 44px -30px rgba(0, 0, 0, 0.9);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --marble: #0c1716; --surface: rgba(17, 30, 29, 0.84); --solid: #13211f; --well: rgba(9, 20, 19, 0.7);
-  --ink: #edf2f0; --muted: #a4b3b0; --line: rgba(208, 178, 112, 0.4); --line-soft: rgba(170, 182, 188, 0.24);
-  --gold: #d5b56d; --gold-2: #e5cf97; --gold-soft: #2c2616; --silver: #8d979d; --silver-soft: #1b2928;
-  --teal: #4fbdb3; --teal-2: #1c938b; --teal-deep: #0f6a66; --teal-ink: #ffffff; --teal-soft: #14322f;
-  --warn: #efa652; --warn-soft: #3a2b17; --bad: #f07466; --veil: rgba(7, 16, 15, 0.8);
-  --shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 22px 44px -30px rgba(0, 0, 0, 0.9);
-  color-scheme: dark;
 }
 /* each script gets its own fonts, so that Latin text is not set in the punctuation of a Japanese font and vice versa */
 :root:lang(ja) {
@@ -98,9 +78,16 @@ body { color: var(--ink); font-family: var(--font-body); font-size: 15px; line-h
 main { max-width: 620px; margin: 0 auto; padding: 8px 16px calc(48px + env(safe-area-inset-bottom)); display: grid; gap: 16px; }
 main > * { min-width: 0; }
 header.top { text-align: center; padding: 34px 4px 10px; }
-header.top h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(33px, 10.6vw, 54px); line-height: 1.1; letter-spacing: 0.07em; margin: 0; color: var(--ink); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6); }
-header.top h1 span { display: inline-block; white-space: nowrap; }
-header.top .tag { font-family: var(--font-serif); font-size: clamp(14px, 4.1vw, 17px); letter-spacing: 0.14em; color: var(--ink); opacity: 0.82; margin: 12px 0 0; text-wrap: balance; }
+header.top h1 { font-family: var(--font-display); font-weight: 700; font-size: min(7.1vw, 46px); line-height: 1.15; letter-spacing: 0.06em; margin: 0; white-space: nowrap; color: var(--ink); }
+header.top h1 .emb { position: relative; display: inline-block; }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  /* the letters: polished black with a silver sheen (bevel), lifted off the marble by a light edge above and a shadow below (emboss) */
+  header.top h1 .emb { background: linear-gradient(180deg, #8d9094 0%, #3a3c3f 30%, #0b0b0c 50%, #2b2c2e 66%, #9a9ea2 88%, #5b5e61 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+    filter: drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.95)) drop-shadow(0 1px 0 rgba(0, 0, 0, 0.55)) drop-shadow(0 4px 5px rgba(20, 20, 20, 0.22)); }
+  /* a fine gold rim, set just behind the letters */
+  header.top h1 .emb::before { content: attr(data-text); position: absolute; left: 0; top: 0; z-index: -1; -webkit-text-fill-color: transparent; -webkit-text-stroke: 1.1px rgba(201, 168, 98, 0.8); }
+}
+header.top .tag { font-family: var(--font-serif); font-size: clamp(13.5px, 3.9vw, 17px); letter-spacing: 0.14em; color: var(--ink); opacity: 0.78; margin: 12px 0 0; text-wrap: balance; }
 .orn { height: 11px; width: min(210px, 60%); margin: 0 auto 16px; position: relative; background: linear-gradient(90deg, transparent, var(--gold) 22%, var(--gold-2) 50%, var(--gold) 78%, transparent) center / 100% 1px no-repeat; }
 .orn i { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; transform: rotate(45deg); background: var(--marble); border: 1px solid var(--gold); box-shadow: 0 0 0 3px var(--marble); }
 .orn.low { margin: 18px auto 0; width: min(120px, 36%); }
@@ -108,7 +95,7 @@ header.top .tag { font-family: var(--font-serif); font-size: clamp(14px, 4.1vw, 
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px 16px; display: grid; gap: 13px; box-shadow: var(--shadow); position: relative; }
 .card > * { min-width: 0; }
-.card h2 { font-family: var(--font-serif); font-size: 18px; font-weight: 600; letter-spacing: 0.04em; margin: 0; display: flex; align-items: baseline; gap: 12px; padding-bottom: 10px; background: linear-gradient(90deg, var(--gold), rgba(168, 138, 72, 0)) left bottom / 100% 1px no-repeat; }
+.card h2 { font-family: var(--font-serif); font-size: 18px; font-weight: 600; letter-spacing: 0.04em; margin: 0; display: flex; align-items: baseline; gap: 12px; padding-bottom: 10px; background: linear-gradient(90deg, var(--silver), rgba(167, 171, 175, 0)) left bottom / 100% 1px no-repeat; }
 .card h2 .step { font-family: var(--font-display); color: var(--gold); font-size: 24px; font-weight: 400; letter-spacing: 0.04em; line-height: 1; }
 .card h2.plain { align-items: center; gap: 8px; font-size: 16px; }
 .card h2.plain small { font-family: var(--font-body); font-size: 12px; font-weight: 400; color: var(--muted); letter-spacing: 0.08em; }
@@ -150,19 +137,17 @@ select, .field input[type=text] { font: inherit; font-size: 15px; letter-spacing
 .slot.done { border-color: var(--gold); background: var(--gold-soft); }
 .slot.done::after { content: "✓"; position: absolute; right: 6px; top: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--teal-deep); color: #fff; font-size: 11px; line-height: 18px; }
 .pg { width: 100%; max-width: 96px; height: auto; display: block; }
-.pg-cone { fill: var(--gold-2); opacity: 0.28; }
-.pg-ray { fill: none; stroke: var(--gold); stroke-width: 1.1; stroke-dasharray: 2.6 2.4; stroke-linecap: round; }
-.pg-axis { fill: none; stroke: var(--teal); stroke-width: 1.1; opacity: 0.55; }
-.pg-phone { fill: var(--teal); }
-.pg-lens { fill: var(--gold); stroke: var(--solid); stroke-width: 0.8; }
-.pg-arrow { fill: none; stroke: var(--teal); stroke-width: 2; stroke-linecap: round; }
-.pg-head { fill: var(--teal); stroke: var(--teal); stroke-width: 0.8; stroke-linejoin: round; }
-.pg-plumb { fill: none; stroke: var(--silver); stroke-width: 1; stroke-dasharray: 1.6 2.4; stroke-linecap: round; }
-.pg-floor { fill: none; stroke: var(--silver); stroke-width: 2.2; stroke-linecap: round; }
-.pg-hair { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linecap: round; }
+.pg-mat { fill: var(--solid); stroke: var(--silver); stroke-width: 1.2; stroke-linejoin: round; }
+.pg-cone { fill: var(--teal-2); opacity: 0.12; }
+.pg-ray { fill: none; stroke: var(--teal); stroke-width: 1.1; stroke-dasharray: 2.4 2.2; stroke-linecap: round; opacity: 0.8; }
+.pg-phone { fill: var(--ink); stroke: var(--ink); stroke-width: 1; stroke-linejoin: round; }
+.pg-screen { fill: #5c6266; }
+.pg-arrow { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linecap: round; }
+.pg-head { fill: var(--gold); }
+.pg-hair { fill: none; stroke: var(--ink); stroke-width: 0.8; stroke-linecap: round; }
 .pg-coin { fill: var(--gold-2); stroke: var(--gold); stroke-width: 0.8; }
 .shoot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tile { appearance: none; position: relative; border: 1px solid var(--gold); background: linear-gradient(180deg, var(--solid), var(--silver-soft)); color: var(--ink); font: inherit; border-radius: 14px; padding: 14px 8px 12px; min-height: 104px; cursor: pointer; display: grid; justify-items: center; align-content: center; gap: 3px; text-align: center; box-shadow: inset 0 0 0 3px var(--solid), inset 0 0 0 4px var(--line-soft); transition: transform 0.1s; }
+.tile { appearance: none; position: relative; border: 1px solid var(--silver); background: linear-gradient(180deg, var(--solid), var(--silver-soft)); color: var(--ink); font: inherit; border-radius: 14px; padding: 14px 8px 12px; min-height: 104px; cursor: pointer; display: grid; justify-items: center; align-content: center; gap: 3px; text-align: center; box-shadow: inset 0 0 0 3px var(--solid), inset 0 0 0 4px var(--line-soft); transition: transform 0.1s; }
 .tile:active { transform: translateY(1px); }
 .tile:focus-within { outline: 3px solid var(--teal-2); outline-offset: 2px; }
 .tile .ic { width: 30px; height: 30px; margin-bottom: 3px; }
@@ -287,10 +272,10 @@ details.card[open] summary::after { content: "－"; }
 .proof .row b { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .proof .row b.zero { color: var(--teal); }
 .proof .row b.nz { color: var(--bad); }
-.langs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.langs button { border: 1px solid var(--silver); background: linear-gradient(180deg, var(--solid), var(--silver-soft)); color: var(--ink); font: inherit; font-size: 14px; min-height: 42px; border-radius: 12px; cursor: pointer; padding: 4px 6px; }
-.langs button[aria-pressed="true"] { border-color: var(--gold); background: var(--gold-soft); box-shadow: inset 0 0 0 1px var(--gold-2); font-weight: 600; }
-footer { color: var(--muted); font-size: 12px; text-align: center; line-height: 1.9; padding-top: 6px; }
+.langpick { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 8px; color: var(--muted); }
+.langpick .ic { width: 16px; height: 16px; stroke: var(--muted); }
+.langpick select { width: auto; min-height: 32px; padding: 3px 26px 3px 8px; font-size: 13px; color: var(--muted); background-color: transparent; border-color: var(--line-soft); border-radius: 8px; }
+footer { color: var(--muted); font-size: 12px; text-align: center; line-height: 1.9; padding-top: 6px; display: grid; justify-items: center; }
 footer .brand { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.14em; color: var(--ink); font-size: 13px; }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .bar > i, .btn, .tile { transition: none; } }
