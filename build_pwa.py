@@ -3,11 +3,13 @@ import hashlib, os, shutil
 here = os.path.dirname(os.path.abspath(__file__)); pwa = os.path.join(here, 'pwa')
 eng = os.path.join(here, 'src', 'engine.js') if os.path.isdir(os.path.join(here, 'src')) else os.path.join(here, 'engine.js')
 shutil.copyfile(eng, os.path.join(pwa, 'engine.js'))
-files = ['index.html', 'styles.css', 'app.js', 'engine.js', 'worker.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png']
+files = ['index.html', 'styles.css', 'i18n.js', 'app.js', 'engine.js', 'worker.js', 'manifest.webmanifest',
+         'bg/marble.webp', 'bg/relief-top.webp', 'bg/relief-low.webp',
+         'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png']
 h = hashlib.sha256()
 for f in files: h.update(open(os.path.join(pwa, f), 'rb').read())
 ver = h.hexdigest()[:12]
-sw = """/* Hair Loss Counter — service worker. Serves the app's own files from the device so it works offline.
+sw = """/* MOT'S HAIR COUNTER — service worker. Serves the app's own files from the device so it works offline.
    It only ever requests this app's own files from this site; it never sends anything. */
 var CACHE = 'hlc-%s';
 var FILES = %s;

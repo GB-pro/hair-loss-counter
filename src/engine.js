@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   var HLC = {};
-  HLC.version = '2.2.0';
+  HLC.version = '2.3.0';
 
   var DEFAULTS = {
     workWidth: 1260,        // rectified sheet width in px (~6 px/mm on A4)
