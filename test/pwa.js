@@ -35,21 +35,22 @@ const PHONE = { width: 412, height: 915, deviceScaleFactor: 2, isMobile: true, h
   const lp = await mk('lang');
   for (const [langs, wantLang, wantCur] of cases) {
     const page = lp; await fresh(page, langs);
-    const got = await page.evaluate(() => ({ lang: document.documentElement.lang, cur: document.getElementById('selCountry').value, h1: document.querySelector('h1').textContent.replace(/\s+/g, ' ').trim(), tag: document.querySelector('header .tag').textContent, pressed: Array.from(document.querySelectorAll('#langs button[aria-pressed="true"]')).map(b => b.dataset.lang).join() }));
+    const got = await page.evaluate(() => ({ lang: document.documentElement.lang, cur: document.getElementById('selCountry').value, h1: document.querySelector('h1').textContent.replace(/\s+/g, ' ').trim(), tag: document.querySelector('header .tag').textContent, pressed: document.getElementById('selLang').value }));
     check('language ' + langs.join(',') + ' -> ' + wantLang + ' / ' + wantCur, got.lang === wantLang && got.cur === wantCur && got.h1 === "MOT'S HAIR COUNTER", got.lang + ' / ' + got.cur + ' / ' + got.tag);
   }
   {  // switching by hand: remembered, title untouched, coins follow until a currency is chosen by hand
     const page = lp; await fresh(page, ['ja-JP']);
     const texts = {};
-    for (const l of ['en', 'zh', 'ko', 'de', 'fr', 'es', 'it', 'pt', 'ja']) { await page.click('#langs button[data-lang="' + l + '"]'); texts[l] = await page.evaluate(() => [document.querySelector('header .tag').textContent, document.getElementById('selCountry').value, document.querySelector('h1').textContent.replace(/\s+/g, ' ').trim(), document.getElementById('btnAnalyze').textContent].join(' | ')); }
-    check('nine language buttons', await page.$$eval('#langs button', b => b.length) === 9 && new Set(Object.values(texts).map(s => s.split(' | ')[0])).size === 9, texts);
-    check('language box is below the records', await page.evaluate(() => !!(document.getElementById('h-hist').compareDocumentPosition(document.getElementById('langs')) & Node.DOCUMENT_POSITION_FOLLOWING)));
-    await page.click('#langs button[data-lang="fr"]'); await page.select('#selCountry', 'GBP'); await page.click('#langs button[data-lang="ko"]');
+    for (const l of ['en', 'zh', 'ko', 'de', 'fr', 'es', 'it', 'pt', 'ja']) { await page.select('#selLang', l); texts[l] = await page.evaluate(() => [document.querySelector('header .tag').textContent, document.getElementById('selCountry').value, document.querySelector('h1').textContent.replace(/\s+/g, ' ').trim(), document.getElementById('btnAnalyze').textContent].join(' | ')); }
+    check('nine languages in the pull-down', await page.$$eval('#selLang option', b => b.length) === 9 && new Set(Object.values(texts).map(s => s.split(' | ')[0])).size === 9, texts);
+    check('language pull-down is at the bottom', await page.evaluate(() => !!document.getElementById('selLang').closest('footer') && !!(document.getElementById('h-hist').compareDocumentPosition(document.getElementById('selLang')) & Node.DOCUMENT_POSITION_FOLLOWING)));
+    await page.select('#selLang', 'fr'); await page.select('#selCountry', 'GBP'); await page.select('#selLang', 'ko');
     check('hand-picked currency stays when the language changes', await page.$eval('#selCountry', e => e.value) === 'GBP');
     await page.reload({ waitUntil: 'load' });
     check('language choice is remembered', await page.evaluate(() => document.documentElement.lang + '/' + document.getElementById('selCountry').value) === 'ko/GBP');
     const untranslated = await page.evaluate(() => Array.from(document.querySelectorAll('[data-i18n]')).filter(e => !e.textContent.trim()).map(e => e.getAttribute('data-i18n')));
     check('no empty labels', untranslated.length === 0, untranslated);
+    check('title on one line', await page.evaluate(() => { const h = document.querySelector('h1'); return h.getBoundingClientRect().height < parseFloat(getComputedStyle(h).fontSize) * 1.6 && h.scrollWidth <= h.clientWidth + 1; }));
   }
 
   {  // which camera opens first depends on the device

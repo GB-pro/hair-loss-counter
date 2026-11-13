@@ -1,6 +1,6 @@
 /* MOT'S HAIR COUNTER — service worker. Serves the app's own files from the device so it works offline.
    It only ever requests this app's own files from this site; it never sends anything. */
-var CACHE = 'hlc-264eaacbffa4';
+var CACHE = 'hlc-e4a7bc7cb1a0';
 var FILES = ["./", "index.html", "styles.css", "i18n.js", "app.js", "engine.js", "worker.js", "manifest.webmanifest", "bg/marble.webp", "bg/relief-top.webp", "bg/relief-low.webp", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
 self.addEventListener('install', function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); })); });
 self.addEventListener('activate', function (e) {

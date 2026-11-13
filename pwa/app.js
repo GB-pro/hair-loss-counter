@@ -841,12 +841,11 @@
 
   // ---------------------------------------------------------------- language switch
   function renderLangs() {
-    var box = $('langs'); box.textContent = '';
-    I18N.order.forEach(function (l) {
-      var b = el('button', '', I18N.names[l]); b.type = 'button'; b.lang = l; b.dataset.lang = l; b.setAttribute('aria-pressed', l === lang ? 'true' : 'false');
-      b.addEventListener('click', function () { setLang(l); }); box.appendChild(b);
-    });
+    var sel = $('selLang'); sel.textContent = '';
+    I18N.order.forEach(function (l) { var o = el('option', '', I18N.names[l]); o.value = l; o.lang = l; sel.appendChild(o); });
+    sel.value = lang;
   }
+  $('selLang').addEventListener('change', function (e) { setLang(e.target.value); });
   function renderAll() {
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
     each('[data-i18n]', function (e) { e.textContent = t(e.getAttribute('data-i18n')); });
